@@ -66,3 +66,59 @@ struct AIEngineTests {
         #expect(prediction.confidence > 0)
     }
 }
+
+@Suite("Property Analytics")
+struct PropertyAnalyticsTests {
+    let entities = PropertySeed.makeEntities()
+
+    @Test("Energy distinguishes generation from consumption")
+    func energySplit() {
+        let e = PropertyAnalytics.energy(entities)
+        #expect(e.generationWatts > 0)   // seed includes a solar array
+        #expect(e.consumptionWatts > 0)  // seed includes powered devices
+    }
+
+    @Test("Security counts cameras and online state")
+    func security() {
+        let s = PropertyAnalytics.security(entities)
+        #expect(s.cameras >= 1)
+        #expect(s.camerasOnline <= s.cameras)
+    }
+
+    @Test("Water reads the pond level")
+    func water() {
+        let w = PropertyAnalytics.water(entities)
+        #expect(w.pondLevelPercent > 0 && w.pondLevelPercent <= 100)
+    }
+}
+
+@Suite("Automation Studio")
+@MainActor
+struct AutomationStudioTests {
+    private func makeTwin() -> DigitalTwinEngine {
+        DigitalTwinEngine(anchor: PropertySeed.anchor,
+                          seed: PropertySeed.makeEntities(),
+                          automations: PropertySeed.makeAutomations())
+    }
+
+    @Test("Generating from an irrigation prompt drafts an orchard flow")
+    func draftsIrrigation() {
+        let vm = AutomationStudioViewModel(twin: makeTwin())
+        vm.draftPrompt = "water the orchard at dawn"
+        vm.generateDraft()
+        #expect(vm.pendingDraft?.module == .orchard)
+        #expect(vm.pendingDraft?.isEnabled == false)
+    }
+
+    @Test("Confirming a draft adds it to the twin")
+    func confirmAddsFlow() {
+        let twin = makeTwin()
+        let vm = AutomationStudioViewModel(twin: twin)
+        let before = twin.automations.count
+        vm.draftPrompt = "pond oxygen guard"
+        vm.generateDraft()
+        vm.confirmDraft()
+        #expect(twin.automations.count == before + 1)
+        #expect(vm.pendingDraft == nil)
+    }
+}

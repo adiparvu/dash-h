@@ -96,11 +96,14 @@ PrvioEarth/
 │   │   └── Components/       GlassComponents, FloatingNavBar
 │   ├── Models/              PropertyEntity, ModuleProfiles, Intelligence
 │   ├── Engine/              DigitalTwinEngine, AIEngine, GISEngine,
-│   │                        SensorGateway, PropertySeed
+│   │                        SensorGateway, PropertyAnalytics, PropertySeed
 │   ├── Features/
 │   │   ├── PropertyMap/      Map view + VM + EntityMarker  ← primary UI
 │   │   ├── ObjectDetail/     ObjectDetailSheet
 │   │   ├── Dashboards/       ModuleDashboardView
+│   │   ├── Onboarding/       OnboardingView (first-run flow)
+│   │   ├── Systems/          SystemsHubView (Energy/Weather/Water/Security)
+│   │   ├── Automation/       AutomationStudioView (Node-RED style)
 │   │   └── Intelligence/     IntelligenceView + VM
 │   ├── Widgets/             PropertyWidgets, IrrigationLiveActivity
 │   └── Spatial/             ImmersiveTwinView (visionOS)
@@ -187,7 +190,15 @@ UI is buildable, demoable and testable today.
   through `SensorGateway` to devices.
 
 Seeded examples: *Dawn Orchard Irrigation*, *Oxygen Guardian*, *Night Security
-Sweep* (see `PropertySeed.makeAutomations`).
+Sweep* (see `PropertySeed.makeAutomations`). The **Automation Studio**
+(`Features/Automation/AutomationStudioView.swift`) renders these as connected
+Liquid Glass node graphs and lets the user describe a new flow in natural
+language — PRVIO drafts the trigger/condition/action nodes for review.
+
+Cross-cutting **Energy / Weather / Water / Security** surfaces are pure derived
+views over the same entities (`Engine/PropertyAnalytics.swift`), presented in
+the **Systems Hub** (`Features/Systems/SystemsHubView.swift`) — never a separate
+data store, so they always agree with the map.
 
 ---
 

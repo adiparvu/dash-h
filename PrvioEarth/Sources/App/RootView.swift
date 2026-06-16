@@ -17,6 +17,9 @@ public struct RootView: View {
     @State private var intelligenceVM: IntelligenceViewModel
 
     @State private var module: PropertyModule = .map
+    @State private var showOnboarding = !UserDefaults.standard.bool(forKey: OnboardingViewModel.key)
+    @State private var showSystems = false
+    @State private var showAutomation = false
 
     public init() {
         let twin = DigitalTwinEngine(
@@ -36,8 +39,10 @@ public struct RootView: View {
     public var body: some View {
         ZStack(alignment: .bottom) {
             // Base layer — always the living twin
-            PropertyMapView(vm: mapVM, module: $module)
-                .ignoresSafeArea()
+            PropertyMapView(vm: mapVM, module: $module) {
+                withAnimation(.prvioMorph) { showSystems = true }
+            }
+            .ignoresSafeArea()
 
             // Floating module / intelligence surfaces above the twin
             overlayContent
@@ -45,6 +50,27 @@ public struct RootView: View {
             // The only persistent chrome
             FloatingNavBar(selection: $module, collapsed: mapVM.isExploring)
                 .padding(.bottom, Spacing.sm)
+        }
+        .sheet(isPresented: $showSystems) {
+            SystemsHubView(twin: twin) {
+                showSystems = false
+                showAutomation = true
+            } onFocusModule: { m in
+                showSystems = false
+                withAnimation(.prvioMorph) { module = m }
+            }
+            .presentationDetents([.large])
+            .presentationBackground(.clear)
+            .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showAutomation) {
+            AutomationStudioView(vm: AutomationStudioViewModel(twin: twin))
+                .presentationDetents([.large])
+                .presentationBackground(.clear)
+                .presentationDragIndicator(.visible)
+        }
+        .fullScreenCover(isPresented: $showOnboarding) {
+            OnboardingView { _ in showOnboarding = false }
         }
         .onAppear {
             twin.startLiveTelemetry()

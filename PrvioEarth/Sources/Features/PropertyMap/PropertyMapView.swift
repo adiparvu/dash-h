@@ -14,10 +14,12 @@ import MapKit
 public struct PropertyMapView: View {
     @State private var vm: PropertyMapViewModel
     @Binding var module: PropertyModule
+    var onOpenSystems: () -> Void
 
-    public init(vm: PropertyMapViewModel, module: Binding<PropertyModule>) {
+    public init(vm: PropertyMapViewModel, module: Binding<PropertyModule>, onOpenSystems: @escaping () -> Void = {}) {
         self._vm = State(initialValue: vm)
         self._module = module
+        self.onOpenSystems = onOpenSystems
     }
 
     public var body: some View {
@@ -91,6 +93,13 @@ public struct PropertyMapView: View {
                 GlassButton("Clear", systemImage: "xmark", tint: .domainSecurity) { vm.clearHighlight() }
                     .transition(.scale.combined(with: .opacity))
             }
+
+            Button(action: onOpenSystems) {
+                Image(systemName: "square.grid.2x2.fill")
+                    .font(.system(size: 17, weight: .semibold))
+                    .padding(Spacing.sm + 4)
+                    .liquidGlass(.floating, tint: .prvioMist, interactive: false)
+            }.buttonStyle(.plain)
         }
     }
 
