@@ -90,6 +90,26 @@ struct PropertyAnalyticsTests {
         let w = PropertyAnalytics.water(entities)
         #expect(w.pondLevelPercent > 0 && w.pondLevelPercent <= 100)
     }
+
+    @Test("Forest rolls up carbon, biomass and species")
+    func forestRollup() {
+        let f = PropertyAnalytics.forest(entities)
+        #expect(f.treeCount > 0)
+        #expect(f.totalCarbonKg > 0)
+        #expect(f.totalBiomassKg > 0)
+        #expect(!f.speciesCounts.isEmpty)
+        // species counts should sum to the tree count
+        #expect(f.speciesCounts.reduce(0) { $0 + $1.count } == f.treeCount)
+    }
+
+    @Test("Orchard rolls up yield and produces a season forecast")
+    func orchardRollup() {
+        let o = PropertyAnalytics.orchard(entities)
+        #expect(o.treeCount > 0)
+        #expect(o.totalExpectedYieldKg > 0)
+        let forecast = PropertyAnalytics.yieldForecast(o, months: 6)
+        #expect(forecast.count == 6)
+    }
 }
 
 @Suite("Property Editor")

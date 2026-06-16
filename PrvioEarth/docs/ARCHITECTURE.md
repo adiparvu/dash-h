@@ -96,11 +96,13 @@ PrvioEarth/
 │   │   └── Components/       GlassComponents, FloatingNavBar
 │   ├── Models/              PropertyEntity, ModuleProfiles, Intelligence
 │   ├── Engine/              DigitalTwinEngine, AIEngine, GISEngine, VisionEngine,
-│   │                        SensorGateway, PropertyAnalytics, PropertySeed
+│   │                        SensorGateway, PropertyAnalytics, ModuleAnalytics,
+│   │                        PropertySeed
 │   ├── Features/
 │   │   ├── PropertyMap/      Map view + VM + EntityMarker  ← primary UI
 │   │   ├── ObjectDetail/     ObjectDetailSheet
 │   │   ├── Dashboards/       ModuleDashboardView
+│   │   ├── Analytics/        ModuleAnalyticsView (Forest/Orchard deep-dives)
 │   │   ├── Onboarding/       OnboardingView (first-run flow)
 │   │   ├── Systems/          SystemsHubView (Energy/Weather/Water/Security)
 │   │   ├── Automation/       AutomationStudioView (Node-RED style)

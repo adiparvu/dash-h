@@ -23,10 +23,15 @@ public struct ModuleDashboardView: View {
     private var entities: [PropertyEntity] { twin.entities(in: module) }
     private var insights: [PrvioInsight] { twin.insights(for: module) }
 
+    @State private var showAnalytics = false
+
+    private var hasAnalytics: Bool { module == .forest || module == .orchard }
+
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.lg) {
                 summaryCard
+                if hasAnalytics { analyticsButton }
                 if !insights.isEmpty { insightStrip }
                 entityFlow
             }
@@ -34,6 +39,29 @@ public struct ModuleDashboardView: View {
             .padding(.top, 80) // clear floating top bar
             .padding(.bottom, 120) // clear nav bar
         }
+        .sheet(isPresented: $showAnalytics) {
+            Group {
+                if module == .forest { ForestAnalyticsView(twin: twin) }
+                else { OrchardAnalyticsView(twin: twin) }
+            }
+            .presentationDetents([.large])
+            .presentationBackground(.clear)
+            .presentationDragIndicator(.visible)
+        }
+    }
+
+    private var analyticsButton: some View {
+        Button { showAnalytics = true } label: {
+            HStack {
+                Image(systemName: "chart.bar.xaxis").foregroundStyle(module.tint)
+                Text(module == .forest ? "Carbon & growth analytics" : "Yield & harvest analytics")
+                    .font(.prvioLabel())
+                Spacer()
+                Image(systemName: "chevron.right").foregroundStyle(.secondary)
+            }
+            .padding(Spacing.md)
+            .liquidGlass(.raised, tint: module.tint, interactive: false)
+        }.buttonStyle(.plain)
     }
 
     // MARK: - Summary
