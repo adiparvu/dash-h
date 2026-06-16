@@ -92,6 +92,38 @@ struct PropertyAnalyticsTests {
     }
 }
 
+@Suite("Property Editor")
+@MainActor
+struct PropertyEditorTests {
+    private func makeTwin() -> DigitalTwinEngine {
+        DigitalTwinEngine(anchor: PropertySeed.anchor,
+                          seed: PropertySeed.makeEntities(),
+                          automations: PropertySeed.makeAutomations())
+    }
+
+    @Test("Placing an entity adds it to the twin")
+    func placeAddsEntity() {
+        let twin = makeTwin()
+        let vm = PropertyEditorViewModel(twin: twin)
+        let before = twin.entities.count
+        vm.beginPlacement(at: twin.anchor.coordinate)
+        vm.draftKind = .pond
+        vm.confirmPlacement()
+        #expect(twin.entities.count == before + 1)
+        #expect(vm.pendingCoordinate == nil)
+        #expect(twin.entities(in: .pond).contains { $0.health.score == 0.9 })
+    }
+
+    @Test("Removing an entity drops it from the twin")
+    func removeDropsEntity() {
+        let twin = makeTwin()
+        let vm = PropertyEditorViewModel(twin: twin)
+        let target = twin.entities.first!
+        vm.remove(target)
+        #expect(!twin.entities.contains { $0.id == target.id })
+    }
+}
+
 @Suite("Vision Engine")
 @MainActor
 struct VisionEngineTests {

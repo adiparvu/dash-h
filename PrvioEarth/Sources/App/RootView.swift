@@ -23,6 +23,7 @@ public struct RootView: View {
     @State private var showAutomation = false
     @State private var showCamera = false
     @State private var showDrone = false
+    @State private var showEditor = false
 
     public init() {
         let twin = DigitalTwinEngine(
@@ -65,6 +66,9 @@ public struct RootView: View {
             }, onOpenDrone: {
                 showSystems = false
                 showDrone = true
+            }, onOpenEditor: {
+                showSystems = false
+                showEditor = true
             }, onFocusModule: { m in
                 showSystems = false
                 withAnimation(.prvioMorph) { module = m }
@@ -90,6 +94,9 @@ public struct RootView: View {
                 .presentationDetents([.large])
                 .presentationBackground(.clear)
                 .presentationDragIndicator(.visible)
+        }
+        .fullScreenCover(isPresented: $showEditor) {
+            PropertyEditorView(vm: PropertyEditorViewModel(twin: twin)) { showEditor = false }
         }
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingView { _ in showOnboarding = false }

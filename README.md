@@ -38,6 +38,7 @@ sensor is an interactive entity you tap to inspect, predict and automate.
 | **Detail** | `Features/ObjectDetail/ObjectDetailSheet.swift` | Liquid Glass entity inspector |
 | **Modules** | `Features/Dashboards/ModuleDashboardView.swift` | Spatial Forest/Orchard/Pond/Home surfaces |
 | **Onboarding** | `Features/Onboarding/OnboardingView.swift` | First-run twin-materializing flow |
+| **Editor** | `Features/Editor/PropertyEditorView.swift` | Tap-the-map to place/remove entities and build your twin |
 | **Systems** | `Features/Systems/SystemsHubView.swift` + `Engine/PropertyAnalytics.swift` | Energy/Weather/Water/Security computed over the twin |
 | **Automation** | `Features/Automation/AutomationStudioView.swift` | Node-RED-style visual flow studio + AI flow generation |
 | **Camera AI** | `Features/CameraAI/CameraAIView.swift` + `Engine/VisionEngine.swift` | Live detection feed (pest/disease/intrusion/wildlife) with bounding boxes |

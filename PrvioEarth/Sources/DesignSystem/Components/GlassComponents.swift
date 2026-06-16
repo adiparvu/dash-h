@@ -105,6 +105,9 @@ public struct MetricTile: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Spacing.md)
         .liquidGlass(.raised, tint: tint, interactive: false)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(label)
+        .accessibilityValue("\(value)\(unit.map { " \($0)" } ?? "")")
     }
 }
 
@@ -115,6 +118,7 @@ public struct HealthRing: View {
     var score: Double
     var lineWidth: CGFloat = 10
     @State private var animated: Double = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     public init(score: Double, lineWidth: CGFloat = 10) {
         self.score = score; self.lineWidth = lineWidth
@@ -134,6 +138,12 @@ public struct HealthRing: View {
                 .font(.prvioHeadline())
                 .contentTransition(.numericText())
         }
-        .onAppear { withAnimation(.prvioFluid.delay(0.1)) { animated = score } }
+        .onAppear {
+            if reduceMotion { animated = score }
+            else { withAnimation(.prvioFluid.delay(0.1)) { animated = score } }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Health")
+        .accessibilityValue("\(Int(score * 100)) percent")
     }
 }

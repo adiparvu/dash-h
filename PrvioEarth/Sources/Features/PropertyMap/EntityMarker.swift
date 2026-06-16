@@ -19,6 +19,7 @@ public struct EntityMarker: View {
     var onTap: () -> Void
 
     @State private var pulse = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var tint: Color { overlayTint ?? entity.health.score.healthColor }
 
@@ -58,7 +59,13 @@ public struct EntityMarker: View {
         .animation(.prvioMorph, value: isSelected)
         .animation(.prvioMorph, value: isDimmed)
         .onAppear {
+            guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) { pulse = true }
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(entity.name)
+        .accessibilityValue("\(entity.kind.rawValue), \(entity.health.status.rawValue), \(Int(entity.health.score * 100)) percent health")
+        .accessibilityHint("Opens details")
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 }

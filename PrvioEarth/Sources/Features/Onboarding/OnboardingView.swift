@@ -126,6 +126,7 @@ public struct OnboardingView: View {
 private struct GlobePulse: View {
     var tint: Color
     @State private var animate = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         ZStack {
             ForEach(0..<3) { i in
@@ -133,11 +134,12 @@ private struct GlobePulse: View {
                     .stroke(tint.opacity(0.3 - Double(i) * 0.08), lineWidth: 1.5)
                     .frame(width: 180 + CGFloat(i) * 120, height: 180 + CGFloat(i) * 120)
                     .scaleEffect(animate ? 1.08 : 0.96)
-                    .animation(.easeInOut(duration: 3).repeatForever(autoreverses: true).delay(Double(i) * 0.3), value: animate)
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 3).repeatForever(autoreverses: true).delay(Double(i) * 0.3), value: animate)
             }
         }
         .blur(radius: 0.5)
         .offset(y: -60)
-        .onAppear { animate = true }
+        .onAppear { animate = !reduceMotion }
+        .accessibilityHidden(true)
     }
 }

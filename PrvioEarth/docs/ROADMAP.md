@@ -80,8 +80,8 @@ with non-color status (icons + text), localized number/units.
 stalls), down-sampled telemetry, lazy map annotation rendering.
 
 **Checklist to ship-quality**
-- [ ] Reduce Motion + Reduce Transparency fallbacks for Liquid Glass.
-- [ ] Full VoiceOver pass + rotor for map entities.
+- [x] Reduce Motion + Reduce Transparency fallbacks for Liquid Glass.
+- [x] VoiceOver labels on markers, metrics and rings (rotor pass still TODO).
 - [ ] Localized into 8+ languages.
 - [ ] Haptics on selection / threshold crossings.
 - [ ] StandBy, Lock Screen, Watch complications.

@@ -43,6 +43,21 @@ highlight** that sweeps across the surface (`LiquidGlassBackground`).
 Rounded SF throughout (`prvioTitle/headline/metric/label/caption`); a 4→36pt
 spacing scale (`Spacing`).
 
+### Accessibility (built into the material)
+The design system is accessible by construction, not as an afterthought:
+- **Reduce Transparency** — `LiquidGlassBackground` swaps `.ultraThinMaterial`
+  for an opaque, high-contrast fill (`prvioDeep`/white + stronger tint and
+  border) so every surface stays legible without translucency.
+- **Reduce Motion** — the specular sweep holds static, and all ambient loops
+  (marker pulse, onboarding `GlobePulse`, Camera AI `ScanlineSweep`,
+  `HealthRing` fill) skip their animations. Functional spring transitions
+  remain but no longer auto-loop.
+- **VoiceOver** — `EntityMarker` exposes a label (name), value (kind, status,
+  health %), hint and button/selected traits; `MetricTile` and `HealthRing`
+  collapse into single labelled elements; decorative animations are
+  `accessibilityHidden`.
+- **Dynamic Type** — all text uses semantic rounded SF styles that scale.
+
 ---
 
 ## 16. Screen-by-Screen UI Specification

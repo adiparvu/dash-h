@@ -106,6 +106,7 @@ PrvioEarth/
 │   │   ├── Automation/       AutomationStudioView (Node-RED style)
 │   │   ├── CameraAI/         CameraAIView (live detection feed)
 │   │   ├── Drone/            DroneModeView (ODM pipeline → map overlays)
+│   │   ├── Editor/           PropertyEditorView (tap-to-build the twin)
 │   │   └── Intelligence/     IntelligenceView + VM
 │   ├── Widgets/             PropertyWidgets, IrrigationLiveActivity
 │   └── Spatial/             ImmersiveTwinView (visionOS)

@@ -16,17 +16,20 @@ public struct SystemsHubView: View {
     var onOpenAutomation: () -> Void
     var onOpenCamera: () -> Void
     var onOpenDrone: () -> Void
+    var onOpenEditor: () -> Void
     var onFocusModule: (PropertyModule) -> Void
 
     public init(twin: DigitalTwinEngine,
                 onOpenAutomation: @escaping () -> Void,
                 onOpenCamera: @escaping () -> Void = {},
                 onOpenDrone: @escaping () -> Void = {},
+                onOpenEditor: @escaping () -> Void = {},
                 onFocusModule: @escaping (PropertyModule) -> Void) {
         self.twin = twin
         self.onOpenAutomation = onOpenAutomation
         self.onOpenCamera = onOpenCamera
         self.onOpenDrone = onOpenDrone
+        self.onOpenEditor = onOpenEditor
         self.onFocusModule = onFocusModule
     }
 
@@ -55,6 +58,9 @@ public struct SystemsHubView: View {
                 toolRow(icon: "paperplane.fill", title: "Drone & Satellite",
                         subtitle: "Orthomosaic, NDVI & LiDAR onto your twin",
                         tint: .domainForest, action: onOpenDrone)
+                toolRow(icon: "pencil.and.outline", title: "Build your Twin",
+                        subtitle: "Place trees, ponds, devices on the map",
+                        tint: .domainGarden, action: onOpenEditor)
 
                 Text("Modules").font(.prvioHeadline())
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: Spacing.md) {

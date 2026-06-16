@@ -70,6 +70,16 @@ public final class DigitalTwinEngine {
         recomputeInsights()
     }
 
+    public func addEntity(_ entity: PropertyEntity) {
+        entities.append(entity)
+        recomputeInsights()
+    }
+
+    public func removeEntity(_ id: UUID) {
+        entities.removeAll { $0.id == id }
+        recomputeInsights()
+    }
+
     public func toggleAutomation(_ id: UUID) {
         guard let idx = automations.firstIndex(where: { $0.id == id }) else { return }
         automations[idx].isEnabled.toggle()

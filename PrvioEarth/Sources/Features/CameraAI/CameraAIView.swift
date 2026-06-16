@@ -185,6 +185,7 @@ private struct BoundingBox: View {
 /// Subtle moving scanline to convey a live AI analysis feed.
 private struct ScanlineSweep: View {
     @State private var y: CGFloat = -1
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         GeometryReader { geo in
             LinearGradient(colors: [.clear, .prvioHorizon.opacity(0.35), .clear],
@@ -192,8 +193,10 @@ private struct ScanlineSweep: View {
                 .frame(height: 60)
                 .offset(y: y * geo.size.height)
                 .onAppear {
+                    guard !reduceMotion else { return }
                     withAnimation(.linear(duration: 2.4).repeatForever(autoreverses: false)) { y = 1 }
                 }
         }
+        .accessibilityHidden(true)
     }
 }

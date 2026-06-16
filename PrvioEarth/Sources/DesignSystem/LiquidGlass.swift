@@ -43,62 +43,76 @@ public enum GlassDepth: CGFloat, CaseIterable, Sendable {
 /// A reusable view-modifier rendering the signature PRVIO Liquid Glass
 /// surface: frosted translucency + a moving specular highlight + a thin
 /// luminous border that adapts to the content behind it.
+///
+/// Fully respects accessibility settings: with **Reduce Transparency** the
+/// material becomes an opaque, high-contrast surface; with **Reduce Motion**
+/// the specular sweep is held static. The surface still reads as Liquid Glass
+/// in both modes — it just stops being see-through / animated.
 public struct LiquidGlassBackground: ViewModifier {
     var depth: GlassDepth
     var tint: Color
     var isInteractive: Bool
 
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var highlightPhase: CGFloat = -1
+
+    private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: depth.cornerRadius, style: .continuous) }
 
     public func body(content: Content) -> some View {
         content
             .background {
                 ZStack {
-                    // Base frosted material
-                    RoundedRectangle(cornerRadius: depth.cornerRadius, style: .continuous)
-                        .fill(.ultraThinMaterial)
-
-                    // Adaptive tint wash
-                    RoundedRectangle(cornerRadius: depth.cornerRadius, style: .continuous)
-                        .fill(tint.opacity(scheme == .dark ? 0.18 : 0.10))
-
-                    // Dynamic specular reflection sweeping across the surface
-                    GeometryReader { geo in
-                        let w = geo.size.width
-                        LinearGradient(
-                            colors: [.white.opacity(0), .white.opacity(depth.highlightOpacity), .white.opacity(0)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                        .frame(width: w * 0.6)
-                        .offset(x: highlightPhase * w)
-                        .blur(radius: 8)
-                        .blendMode(.plusLighter)
-                        .mask(RoundedRectangle(cornerRadius: depth.cornerRadius, style: .continuous))
-                        .allowsHitTesting(false)
+                    if reduceTransparency {
+                        // Opaque, high-contrast fallback (no blur, no see-through).
+                        shape.fill(scheme == .dark ? Color.prvioDeep : Color.white)
+                        shape.fill(tint.opacity(scheme == .dark ? 0.32 : 0.16))
+                    } else {
+                        // Base frosted material
+                        shape.fill(.ultraThinMaterial)
+                        // Adaptive tint wash
+                        shape.fill(tint.opacity(scheme == .dark ? 0.18 : 0.10))
+                        // Dynamic specular reflection sweeping across the surface
+                        // (held static when Reduce Motion is on).
+                        specularHighlight
                     }
                 }
             }
             .overlay {
-                // Luminous adaptive border
-                RoundedRectangle(cornerRadius: depth.cornerRadius, style: .continuous)
-                    .strokeBorder(
-                        LinearGradient(
-                            colors: [.white.opacity(0.55), .white.opacity(0.05)],
-                            startPoint: .top, endPoint: .bottom
-                        ),
-                        lineWidth: 0.8
-                    )
+                // Luminous adaptive border — stronger when opaque for contrast.
+                shape.strokeBorder(
+                    LinearGradient(
+                        colors: [.white.opacity(reduceTransparency ? 0.7 : 0.55), .white.opacity(0.05)],
+                        startPoint: .top, endPoint: .bottom),
+                    lineWidth: reduceTransparency ? 1.2 : 0.8)
             }
-            .clipShape(RoundedRectangle(cornerRadius: depth.cornerRadius, style: .continuous))
+            .clipShape(shape)
             .shadow(color: .black.opacity(0.22), radius: depth.shadowRadius, y: depth.shadowY)
             .onAppear {
-                guard isInteractive else { return }
+                guard isInteractive, !reduceMotion else { return }
                 withAnimation(.linear(duration: 6).repeatForever(autoreverses: false)) {
                     highlightPhase = 1.4
                 }
             }
+    }
+
+    private var specularHighlight: some View {
+        GeometryReader { geo in
+            let w = geo.size.width
+            LinearGradient(
+                colors: [.white.opacity(0), .white.opacity(depth.highlightOpacity), .white.opacity(0)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .frame(width: w * 0.6)
+            // Static, centred sheen under Reduce Motion; animated sweep otherwise.
+            .offset(x: (reduceMotion ? 0.2 : highlightPhase) * w)
+            .blur(radius: 8)
+            .blendMode(.plusLighter)
+            .mask(shape)
+            .allowsHitTesting(false)
+        }
     }
 }
 
