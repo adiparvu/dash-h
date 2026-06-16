@@ -90,8 +90,10 @@ public enum PropertyAnalytics {
         var level = 100.0
         if case .pond(let p)? = pond?.detail { level = p.waterLevelPercent }
         let valves = entities.filter { $0.kind == .irrigationValve && ($0.metrics["flowLpm"] ?? 0) > 0 }
-        let pumps = entities.filter {
-            $0.kind == .pump && { if case .device(let d) = $0.detail { return d.isOnline }; return false }()
+        let pumps = entities.filter { e in
+            guard e.kind == .pump else { return false }
+            if case .device(let d) = e.detail { return d.isOnline }
+            return false
         }
         return WaterSummary(pondLevelPercent: level, irrigationValvesOpen: valves.count, pumpsOnline: pumps.count)
     }
