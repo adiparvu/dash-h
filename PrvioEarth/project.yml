@@ -1,0 +1,114 @@
+# PRVIO EARTH — XcodeGen project spec
+#
+# Generates a real multi-target Xcode project from the source tree:
+#   • PrvioEarthCore  — shared framework (DesignSystem, Models, Engine, Features)
+#   • PrvioEarth      — iOS app (@main), embeds the widget extension
+#   • PrvioEarthWidgets — WidgetKit extension (widgets + Live Activity)
+#   • PrvioEarthTests — Swift Testing unit tests
+#
+# Generate with:   cd PrvioEarth && xcodegen generate && open PrvioEarth.xcodeproj
+# (Install XcodeGen via `brew install xcodegen`.)
+#
+# The framework is named PrvioEarthCore so `@testable import PrvioEarthCore`
+# works identically under Xcode and SwiftPM.
+
+name: PrvioEarth
+
+options:
+  bundleIdPrefix: com.prvio.earth
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+settings:
+  base:
+    # Swift 5 language mode in Xcode keeps strict-concurrency findings as
+    # warnings (the SwiftPM manifest still builds the core in Swift 6 mode).
+    SWIFT_VERSION: "5.0"
+    SWIFT_STRICT_CONCURRENCY: minimal
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""        # set your team to run on device
+
+targets:
+
+  # ---- Shared framework -------------------------------------------------
+  PrvioEarthCore:
+    type: framework
+    platform: iOS
+    sources:
+      - path: Sources/DesignSystem
+      - path: Sources/Models
+      - path: Sources/Engine
+      - path: Sources/Features
+      - path: Sources/App/RootView.swift   # app shell lives in Core; only @main is in the app target
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.prvio.earth.core
+        GENERATE_INFOPLIST_FILE: YES
+        DEFINES_MODULE: YES
+        TARGETED_DEVICE_FAMILY: "1,2"
+
+  # ---- iOS application --------------------------------------------------
+  PrvioEarth:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources/App/PrvioEarthApp.swift
+    dependencies:
+      - target: PrvioEarthCore
+      - target: PrvioEarthWidgets
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.prvio.earth
+        GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: "1,2"
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "PRVIO EARTH uses your location to anchor and center your property's Digital Twin."
+        INFOPLIST_KEY_NSCameraUsageDescription: "PRVIO EARTH uses the camera for AR property overlays and Camera AI inspection."
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait"
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+
+  # ---- WidgetKit extension ---------------------------------------------
+  PrvioEarthWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Sources/Widgets
+    dependencies:
+      - target: PrvioEarthCore
+    info:
+      path: Resources/PrvioEarthWidgets-Info.plist
+      properties:
+        CFBundleDisplayName: PRVIO Widgets
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.prvio.earth.widgets
+        TARGETED_DEVICE_FAMILY: "1,2"
+
+  # ---- Unit tests -------------------------------------------------------
+  PrvioEarthTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests
+    dependencies:
+      - target: PrvioEarthCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.prvio.earth.tests
+
+schemes:
+  PrvioEarth:
+    build:
+      targets:
+        PrvioEarth: all
+        PrvioEarthWidgets: all
+    run:
+      config: Debug
+    test:
+      targets:
+        - PrvioEarthTests

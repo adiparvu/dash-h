@@ -64,11 +64,27 @@ sensor is an interactive entity you tap to inspect, predict and automate.
 ---
 
 ## Build
-The reusable core is a Swift package (`PrvioEarth/Package.swift`, iOS 18+ /
-visionOS 2). The `@main` app, Widget Extension and visionOS app are Xcode
-targets that depend on `PrvioEarthCore` — see *Targets & Project Layout* in
-`docs/ARCHITECTURE.md`. The app runs on simulated telemetry out of the box (no
-backend or hardware required).
+
+**Full app (recommended)** — a real multi-target Xcode project is generated
+from `PrvioEarth/project.yml` with [XcodeGen](https://github.com/yonaskolb/XcodeGen):
+
+```bash
+brew install xcodegen
+cd PrvioEarth
+xcodegen generate
+open PrvioEarth.xcodeproj   # ⌘R to run on an iOS 18 simulator
+```
+
+This produces four targets — `PrvioEarthCore` (shared framework), `PrvioEarth`
+(the iOS app, which embeds the widget), `PrvioEarthWidgets` (WidgetKit
+extension + Live Activity) and `PrvioEarthTests` (Swift Testing). The generated
+`.xcodeproj` is git-ignored; regenerate any time.
+
+**Core only** — open `PrvioEarth/Package.swift` directly in Xcode to build/test
+the `PrvioEarthCore` library (DesignSystem + Models + Engine + Features).
+
+The app runs on simulated telemetry out of the box — no backend or hardware
+required.
 
 ---
 

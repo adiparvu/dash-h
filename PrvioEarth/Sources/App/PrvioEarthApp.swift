@@ -8,6 +8,7 @@
 //
 
 import SwiftUI
+import PrvioEarthCore   // Xcode: RootView and the engines live in the shared framework
 
 @main
 struct PrvioEarthApp: App {

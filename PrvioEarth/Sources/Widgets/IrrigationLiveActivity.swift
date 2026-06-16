@@ -12,6 +12,7 @@
 import ActivityKit
 import WidgetKit
 import SwiftUI
+import PrvioEarthCore   // design tokens from the shared framework
 
 public struct IrrigationAttributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable {

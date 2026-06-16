@@ -117,11 +117,18 @@ PrvioEarth/
 ```
 
 ### Targets & Project Layout (Xcode)
-- **PrvioEarth (iOS app)** — `App/` + depends on `PrvioEarthCore`.
+The Xcode project is generated from `project.yml` via XcodeGen
+(`xcodegen generate`). It defines:
 - **PrvioEarthCore (framework)** — DesignSystem + Models + Engine + Features.
-- **PrvioEarthWidgets (extension)** — `Widgets/`, shares Core + App Group.
-- **PrvioEarthVision (visionOS app)** — `Spatial/` + Core.
-- **PrvioEarthTests** — Swift Testing.
+- **PrvioEarth (iOS app)** — `App/` (@main), depends on Core, embeds the widget.
+- **PrvioEarthWidgets (extension)** — `Widgets/` (@main `WidgetBundle`),
+  shares Core + App Group.
+- **PrvioEarthTests** — Swift Testing, `@testable import PrvioEarthCore`.
+
+The Xcode framework is deliberately named `PrvioEarthCore` so the test import
+is identical under both Xcode and SwiftPM. **visionOS** (`Spatial/`) is wired in
+code (guarded with `#if os(visionOS)`) and shares Core; a dedicated visionOS app
+target with its own immersive `@main` entry is the next packaging step.
 
 ---
 

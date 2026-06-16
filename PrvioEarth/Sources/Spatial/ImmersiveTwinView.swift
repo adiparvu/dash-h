@@ -14,6 +14,7 @@
 #if os(visionOS)
 import SwiftUI
 import RealityKit
+import PrvioEarthCore
 
 public struct ImmersiveTwinView: View {
     var twin: DigitalTwinEngine

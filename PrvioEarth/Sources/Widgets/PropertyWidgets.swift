@@ -12,6 +12,7 @@
 
 import WidgetKit
 import SwiftUI
+import PrvioEarthCore   // design tokens (Color/Spacing/fonts) come from the shared framework
 
 // MARK: - Snapshot model (shared via App Group)
 
