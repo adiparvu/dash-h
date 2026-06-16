@@ -95,7 +95,7 @@ PrvioEarth/
 │   ├── DesignSystem/        LiquidGlass, Theme
 │   │   └── Components/       GlassComponents, FloatingNavBar
 │   ├── Models/              PropertyEntity, ModuleProfiles, Intelligence
-│   ├── Engine/              DigitalTwinEngine, AIEngine, GISEngine,
+│   ├── Engine/              DigitalTwinEngine, AIEngine, GISEngine, VisionEngine,
 │   │                        SensorGateway, PropertyAnalytics, PropertySeed
 │   ├── Features/
 │   │   ├── PropertyMap/      Map view + VM + EntityMarker  ← primary UI
@@ -104,6 +104,8 @@ PrvioEarth/
 │   │   ├── Onboarding/       OnboardingView (first-run flow)
 │   │   ├── Systems/          SystemsHubView (Energy/Weather/Water/Security)
 │   │   ├── Automation/       AutomationStudioView (Node-RED style)
+│   │   ├── CameraAI/         CameraAIView (live detection feed)
+│   │   ├── Drone/            DroneModeView (ODM pipeline → map overlays)
 │   │   └── Intelligence/     IntelligenceView + VM
 │   ├── Widgets/             PropertyWidgets, IrrigationLiveActivity
 │   └── Spatial/             ImmersiveTwinView (visionOS)
@@ -214,6 +216,21 @@ stream applied to the twin. Transports planned:
 - **Camera AI** → detection events as frames.
 
 `SimulatedTransport` powers previews/tests with no hardware.
+
+### Visual Intelligence — `Engine/VisionEngine.swift`
+Two roles behind one async API:
+- **Camera AI** — turns camera frames into classified `CameraDetection`s
+  (person, animal, bird, fish, vehicle, **pest, disease, fallen tree,
+  intrusion**) with confidence + normalized bounding boxes. Alerting classes
+  bubble up to Security. UI: `Features/CameraAI/CameraAIView.swift` renders the
+  feed with live bounding-box overlays and a camera switcher. Production swaps
+  the simulated generator for Vision/Core ML requests per frame.
+- **Drone / Satellite pipeline** — drives a `DroneMission` through the
+  OpenDroneMap stages (plan → fly → upload → reconstruct → analyze → complete)
+  and produces `AerialProduct`s (orthomosaic, NDVI, LiDAR canopy, terrain,
+  thermal). UI: `Features/Drone/DroneModeView.swift` shows live mission progress
+  and applies any product onto the live twin via `GISEngine` overlays — closing
+  the loop from aerial reconstruction back to the spatial model.
 
 ---
 

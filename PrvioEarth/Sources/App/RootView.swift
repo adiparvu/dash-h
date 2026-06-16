@@ -13,6 +13,7 @@ import SwiftUI
 public struct RootView: View {
     @State private var twin: DigitalTwinEngine
     @State private var gis: GISEngine
+    @State private var vision: VisionEngine
     @State private var mapVM: PropertyMapViewModel
     @State private var intelligenceVM: IntelligenceViewModel
 
@@ -20,6 +21,8 @@ public struct RootView: View {
     @State private var showOnboarding = !UserDefaults.standard.bool(forKey: OnboardingViewModel.key)
     @State private var showSystems = false
     @State private var showAutomation = false
+    @State private var showCamera = false
+    @State private var showDrone = false
 
     public init() {
         let twin = DigitalTwinEngine(
@@ -32,6 +35,7 @@ public struct RootView: View {
 
         _twin = State(initialValue: twin)
         _gis = State(initialValue: gis)
+        _vision = State(initialValue: VisionEngine())
         _mapVM = State(initialValue: mapVM)
         _intelligenceVM = State(initialValue: intel)
     }
@@ -52,19 +56,37 @@ public struct RootView: View {
                 .padding(.bottom, Spacing.sm)
         }
         .sheet(isPresented: $showSystems) {
-            SystemsHubView(twin: twin) {
+            SystemsHubView(twin: twin, onOpenAutomation: {
                 showSystems = false
                 showAutomation = true
-            } onFocusModule: { m in
+            }, onOpenCamera: {
+                showSystems = false
+                showCamera = true
+            }, onOpenDrone: {
+                showSystems = false
+                showDrone = true
+            }, onFocusModule: { m in
                 showSystems = false
                 withAnimation(.prvioMorph) { module = m }
-            }
+            })
             .presentationDetents([.large])
             .presentationBackground(.clear)
             .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showAutomation) {
             AutomationStudioView(vm: AutomationStudioViewModel(twin: twin))
+                .presentationDetents([.large])
+                .presentationBackground(.clear)
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showCamera) {
+            CameraAIView(vm: CameraAIViewModel(twin: twin, vision: vision))
+                .presentationDetents([.large])
+                .presentationBackground(.clear)
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showDrone) {
+            DroneModeView(vm: DroneModeViewModel(vision: vision, gis: gis))
                 .presentationDetents([.large])
                 .presentationBackground(.clear)
                 .presentationDragIndicator(.visible)

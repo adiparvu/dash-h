@@ -14,13 +14,19 @@ import SwiftUI
 public struct SystemsHubView: View {
     var twin: DigitalTwinEngine
     var onOpenAutomation: () -> Void
+    var onOpenCamera: () -> Void
+    var onOpenDrone: () -> Void
     var onFocusModule: (PropertyModule) -> Void
 
     public init(twin: DigitalTwinEngine,
                 onOpenAutomation: @escaping () -> Void,
+                onOpenCamera: @escaping () -> Void = {},
+                onOpenDrone: @escaping () -> Void = {},
                 onFocusModule: @escaping (PropertyModule) -> Void) {
         self.twin = twin
         self.onOpenAutomation = onOpenAutomation
+        self.onOpenCamera = onOpenCamera
+        self.onOpenDrone = onOpenDrone
         self.onFocusModule = onFocusModule
     }
 
@@ -39,20 +45,16 @@ public struct SystemsHubView: View {
                     SecurityTile(summary: PropertyAnalytics.security(entities))
                 }
 
-                Button(action: onOpenAutomation) {
-                    HStack {
-                        Image(systemName: "wand.and.stars").font(.title2).foregroundStyle(.prvioHorizon)
-                        VStack(alignment: .leading) {
-                            Text("Automation Studio").font(.prvioLabel())
-                            Text("\(twin.automations.count) flows • \(twin.automations.filter(\.isEnabled).count) active")
-                                .font(.prvioCaption()).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        Image(systemName: "chevron.right").foregroundStyle(.secondary)
-                    }
-                    .padding(Spacing.md)
-                    .liquidGlass(.raised, tint: .prvioHorizon, interactive: false)
-                }.buttonStyle(.plain)
+                Text("Intelligence Tools").font(.prvioHeadline())
+                toolRow(icon: "wand.and.stars", title: "Automation Studio",
+                        subtitle: "\(twin.automations.count) flows • \(twin.automations.filter(\.isEnabled).count) active",
+                        tint: .prvioHorizon, action: onOpenAutomation)
+                toolRow(icon: "video.badge.waveform", title: "Camera AI",
+                        subtitle: "\(twin.entities.filter { $0.kind == .camera }.count) cameras • live detection",
+                        tint: .domainHome, action: onOpenCamera)
+                toolRow(icon: "paperplane.fill", title: "Drone & Satellite",
+                        subtitle: "Orthomosaic, NDVI & LiDAR onto your twin",
+                        tint: .domainForest, action: onOpenDrone)
 
                 Text("Modules").font(.prvioHeadline())
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: Spacing.md) {
@@ -75,6 +77,22 @@ public struct SystemsHubView: View {
             RoundedRectangle(cornerRadius: 40, style: .continuous)
                 .fill(.ultraThinMaterial).ignoresSafeArea()
         }
+    }
+
+    private func toolRow(icon: String, title: String, subtitle: String, tint: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                Image(systemName: icon).font(.title2).foregroundStyle(tint).frame(width: 32)
+                VStack(alignment: .leading) {
+                    Text(title).font(.prvioLabel())
+                    Text(subtitle).font(.prvioCaption()).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").foregroundStyle(.secondary)
+            }
+            .padding(Spacing.md)
+            .liquidGlass(.raised, tint: tint, interactive: false)
+        }.buttonStyle(.plain)
     }
 
     private var quickModules: [(module: PropertyModule, label: String, icon: String, tint: Color)] {

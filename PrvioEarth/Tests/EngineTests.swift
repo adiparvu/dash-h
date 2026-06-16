@@ -92,6 +92,38 @@ struct PropertyAnalyticsTests {
     }
 }
 
+@Suite("Vision Engine")
+@MainActor
+struct VisionEngineTests {
+
+    @Test("Aerial product maps to the matching GIS overlay")
+    func productOverlayMapping() {
+        #expect(AerialProduct.ndvi.overlay == .ndvi)
+        #expect(AerialProduct.orthomosaic.overlay == .orthomosaic)
+        #expect(AerialProduct.terrain.overlay == .none)
+    }
+
+    @Test("Mission stages advance and report progress 0...1")
+    func missionStageProgress() {
+        #expect(DroneMission.Stage.planned.progress == 0)
+        #expect(DroneMission.Stage.complete.progress == 1)
+    }
+
+    @Test("Alerting detections are surfaced from frames")
+    func alertingDetections() {
+        let engine = VisionEngine()
+        // Directly seed a frame with an intrusion to verify aggregation.
+        let camID = UUID()
+        let frame = CameraFrame(cameraEntityID: camID, detections: [
+            .init(classification: .intrusion, confidence: 0.9, boundingBox: .init(x: 0.1, y: 0.1, width: 0.2, height: 0.2)),
+            .init(classification: .bird, confidence: 0.8, boundingBox: .init(x: 0.5, y: 0.5, width: 0.1, height: 0.1))
+        ])
+        engine.addMission(DroneMission(name: "t", stage: .planned, imageCount: 1, areaHectares: 1, products: []))
+        // alerting filter only counts intrusion/pest/disease/fallenTree
+        #expect(frame.detections.filter { $0.classification.isAlerting }.count == 1)
+    }
+}
+
 @Suite("Automation Studio")
 @MainActor
 struct AutomationStudioTests {

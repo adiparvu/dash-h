@@ -40,6 +40,8 @@ sensor is an interactive entity you tap to inspect, predict and automate.
 | **Onboarding** | `Features/Onboarding/OnboardingView.swift` | First-run twin-materializing flow |
 | **Systems** | `Features/Systems/SystemsHubView.swift` + `Engine/PropertyAnalytics.swift` | Energy/Weather/Water/Security computed over the twin |
 | **Automation** | `Features/Automation/AutomationStudioView.swift` | Node-RED-style visual flow studio + AI flow generation |
+| **Camera AI** | `Features/CameraAI/CameraAIView.swift` + `Engine/VisionEngine.swift` | Live detection feed (pest/disease/intrusion/wildlife) with bounding boxes |
+| **Drone** | `Features/Drone/DroneModeView.swift` | OpenDroneMap pipeline → orthomosaic/NDVI/LiDAR overlays on the twin |
 | **AI** | `Features/Intelligence/IntelligenceView.swift` | PRVIO Intelligence assistant |
 | **App** | `App/PrvioEarthApp.swift`, `RootView.swift` | Entry point + orchestration |
 | **Widgets** | `Widgets/PropertyWidgets.swift`, `IrrigationLiveActivity.swift` | WidgetKit + Live Activity |
