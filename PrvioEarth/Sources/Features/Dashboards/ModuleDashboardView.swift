@@ -1,0 +1,103 @@
+//
+//  ModuleDashboardView.swift
+//  PRVIO EARTH
+//
+//  A spatial, object-centric module overview (Forest, Orchard, Pond,
+//  Home). NOT an enterprise dashboard: it's a Liquid Glass summary that
+//  floats over a filtered twin, leading with an aggregate health ring and
+//  letting the user dive straight back to entities on the map. Reused for
+//  every module by swapping the module parameter.
+//
+
+import SwiftUI
+
+public struct ModuleDashboardView: View {
+    var module: PropertyModule
+    var twin: DigitalTwinEngine
+    var onSelectEntity: (PropertyEntity) -> Void
+
+    public init(module: PropertyModule, twin: DigitalTwinEngine, onSelectEntity: @escaping (PropertyEntity) -> Void) {
+        self.module = module; self.twin = twin; self.onSelectEntity = onSelectEntity
+    }
+
+    private var entities: [PropertyEntity] { twin.entities(in: module) }
+    private var insights: [PrvioInsight] { twin.insights(for: module) }
+
+    public var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Spacing.lg) {
+                summaryCard
+                if !insights.isEmpty { insightStrip }
+                entityFlow
+            }
+            .padding(Spacing.md)
+            .padding(.top, 80) // clear floating top bar
+            .padding(.bottom, 120) // clear nav bar
+        }
+    }
+
+    // MARK: - Summary
+
+    private var summaryCard: some View {
+        GlassCard(depth: .modal, tint: module.tint) {
+            HStack(spacing: Spacing.lg) {
+                HealthRing(score: twin.averageHealth(for: module), lineWidth: 12)
+                    .frame(width: 88, height: 88)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(module.title).font(.prvioTitle())
+                    Text("\(entities.count) entities monitored").font(.prvioLabel()).foregroundStyle(.secondary)
+                    Text(summaryLine).font(.prvioCaption()).foregroundStyle(module.tint)
+                }
+                Spacer()
+            }
+        }
+    }
+
+    private var summaryLine: String {
+        let stressed = entities.filter { $0.health.status == .stressed || $0.health.status == .critical }.count
+        return stressed == 0 ? "All healthy" : "\(stressed) need attention"
+    }
+
+    // MARK: - Insights
+
+    private var insightStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: Spacing.md) {
+                ForEach(insights) { insight in
+                    GlassCard(tint: module.tint) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Label(insight.title, systemImage: insight.severity.symbol)
+                                .font(.prvioLabel()).lineLimit(2)
+                            Text(insight.detail).font(.prvioCaption())
+                                .foregroundStyle(.secondary).lineLimit(3)
+                        }
+                        .frame(width: 240, alignment: .leading)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Entity Flow (tap → back to map)
+
+    private var entityFlow: some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: Spacing.md)], spacing: Spacing.md) {
+            ForEach(entities) { entity in
+                Button { onSelectEntity(entity) } label: {
+                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                        HStack {
+                            Image(systemName: entity.kind.symbol).foregroundStyle(entity.health.score.healthColor)
+                            Spacer()
+                            Circle().fill(entity.health.score.healthColor).frame(width: 10, height: 10)
+                        }
+                        Text(entity.name).font(.prvioLabel()).lineLimit(1)
+                        Text("\(Int(entity.health.score * 100))% health").font(.prvioCaption()).foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(Spacing.md)
+                    .liquidGlass(.raised, tint: module.tint, interactive: false)
+                }.buttonStyle(.plain)
+            }
+        }
+    }
+}
