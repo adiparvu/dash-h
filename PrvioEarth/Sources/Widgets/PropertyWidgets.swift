@@ -101,7 +101,7 @@ struct PropertyWidgetView: View {
                 .font(.prvioCaption()).foregroundStyle(.domainEnergy)
         }
         .padding(12)
-        .containerBackground(for: .widget) { Color.prvioDeep.gradient }
+        .containerBackground(Color.prvioDeep.gradient, for: .widget)
     }
 }
 

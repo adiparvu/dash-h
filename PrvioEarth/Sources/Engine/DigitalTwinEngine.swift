@@ -98,7 +98,7 @@ public final class DigitalTwinEngine {
         tickTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: interval)
-                await self?.tick()
+                self?.tick()
             }
         }
     }
