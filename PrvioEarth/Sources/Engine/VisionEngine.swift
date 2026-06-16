@@ -14,6 +14,7 @@
 
 import Foundation
 import CoreGraphics
+import Observation
 
 @MainActor
 @Observable
