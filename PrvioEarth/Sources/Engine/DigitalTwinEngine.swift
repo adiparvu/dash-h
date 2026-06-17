@@ -76,6 +76,12 @@ public final class DigitalTwinEngine {
         healthHistoryBuffer[id] ?? []
     }
 
+    /// AI-driven N-day health forecast for ObjectDetailSheet's predictive chart.
+    public func forecastHealth(for id: UUID, days: Int = 7) -> [TimeSeriesPoint] {
+        guard let entity = entity(id) else { return [] }
+        return ai.forecastHealth(for: entity, days: days)
+    }
+
     /// Expose cached weather context so IntelligenceViewModel can forward it to AIEngine.
     public var latestWeather: WeatherEngine.Current? { weatherCurrent }
     public var latestForecast: [WeatherEngine.DayForecast] { weatherForecast }
@@ -169,6 +175,9 @@ public final class DigitalTwinEngine {
             healthHistoryBuffer[entities[i].id] = buf
         }
         tickCount += 1
+        // Persist entities every 12th tick (~60 s at the default 5 s interval) so
+        // changes survive a force-quit between the scene-phase background saves.
+        if tickCount % 12 == 0 { PersistenceStore.shared.save(entities: entities) }
         // Throttle the expensive AI + snapshot write to every 3rd tick;
         // health-score drift is still applied on every tick so the map feels live.
         guard tickCount % 3 == 0 else { return }

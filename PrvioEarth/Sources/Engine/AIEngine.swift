@@ -234,6 +234,38 @@ public struct AIEngine: Sendable {
                 : "\(history.metric) is declining — consider intervention this week.")
     }
 
+    // MARK: - Health Forecast
+
+    /// Extrapolate entity health over `days` future days using mean-reversion
+    /// with module-specific equilibria. Deterministic noise keyed on the entity's
+    /// UUID makes each sparkline unique without randomness across redraws.
+    public func forecastHealth(for entity: PropertyEntity, days: Int = 7) -> [TimeSeriesPoint] {
+        let base = entity.health.score
+        let mean: Double   // long-run equilibrium
+        let speed: Double  // mean-reversion speed (daily fraction)
+        switch entity.kind.module {
+        case .forest:      mean = 0.82; speed = 0.04
+        case .orchard:     mean = 0.78; speed = 0.06
+        case .pond:        mean = 0.80; speed = 0.08
+        case .garden:      mean = 0.76; speed = 0.07
+        case .greenhouse:  mean = 0.84; speed = 0.05
+        case .agriculture: mean = 0.74; speed = 0.06
+        default:           mean = 0.90; speed = 0.03
+        }
+        let seed = Double(entity.id.hashValue & 0xFFFF) / Double(0x10000)
+        var score = base
+        var points: [TimeSeriesPoint] = [.init(timestamp: .now, value: score)]
+        for day in 1...days {
+            score += speed * (mean - score)
+            score += 0.008 * sin(Double(day) * .pi * 2.1 + seed * .pi)
+            score = min(1, max(0, score))
+            points.append(.init(
+                timestamp: .now.addingTimeInterval(Double(day) * 86_400),
+                value: score))
+        }
+        return points
+    }
+
     // MARK: - Conversational Assistant
 
     /// Resolve a natural-language query against the twin. A production build

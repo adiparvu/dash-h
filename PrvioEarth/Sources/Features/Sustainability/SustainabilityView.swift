@@ -82,6 +82,54 @@ public struct SustainabilityView: View {
         }
     }
 
+    // MARK: - Export
+
+    private var exportReport: String {
+        let lines: [String] = [
+            "PRVIO EARTH — Sustainability Report",
+            "Generated: \(Date().formatted(.dateTime.day().month().year().hour().minute()))",
+            String(repeating: "=", count: 44),
+            "",
+            "CARBON SEQUESTRATION",
+            "  Captured this year:  \(Int(carbonKg)) kg",
+            "  Annual target:       \(Int(carbonTargetKg)) kg",
+            "  Progress:            \(Int(carbonFraction * 100))%",
+            "  Car-offset equiv.:   \(String(format: "%.1f", carbonKg / 120)) cars/year",
+            "",
+            "ENERGY",
+            "  Today's usage:    \(String(format: "%.1f", energyKwh)) kWh",
+            "  Renewable share:  \(Int(renewableFraction * 100))%",
+            "  Grid status:      \(energySummary.isExporting ? "Exporting" : "Importing")",
+            "",
+            "WATER",
+            "  Irrigation efficiency:  \(Int(waterEfficiency * 100))%",
+            "  Pumps online:           \(waterSummary.pumpsOnline)",
+            "",
+            "BIODIVERSITY",
+            "  Unique species:  \(uniqueSpeciesCount)",
+            "  Target:          20 species",
+            "  Score:           \(Int(biodiversityScore * 100))%",
+            "",
+            "GRADES",
+            "  Carbon:  \(gradeLabel(carbonFraction))",
+            "  Energy:  \(gradeLabel(renewableFraction))",
+            "  Water:   \(gradeLabel(waterEfficiency))",
+            "  Bio:     \(gradeLabel(biodiversityScore))",
+            "",
+            "Data source: PRVIO EARTH Digital Twin — live sensor telemetry.",
+        ]
+        return lines.joined(separator: "\n")
+    }
+
+    private func gradeLabel(_ score: Double) -> String {
+        switch score {
+        case 0.9...: return "A — Outstanding"
+        case 0.75...: return "B — Good"
+        case 0.6...: return "C — Average"
+        default: return "D — Needs work"
+        }
+    }
+
     // MARK: - Body
 
     public var body: some View {
@@ -121,6 +169,15 @@ public struct SustainabilityView: View {
                     Text("Updated from live twin").font(.prvioCaption()).foregroundStyle(.domainForest)
                 }
                 Spacer()
+                ShareLink(item: exportReport,
+                          subject: Text("PRVIO Sustainability Report"),
+                          message: Text("Generated from PRVIO EARTH Digital Twin")) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.prvioLabel())
+                        .padding(Spacing.sm)
+                        .liquidGlass(.raised, tint: .domainForest, interactive: false)
+                }
+                .buttonStyle(.plain)
             }
         }
     }

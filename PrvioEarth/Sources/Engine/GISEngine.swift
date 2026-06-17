@@ -58,6 +58,7 @@ public final class GISEngine {
     public var overlay: DataOverlay = .none
     public var is3D: Bool = true
     public var cameraPosition: MapCameraPosition
+    public private(set) var fences: [GeoFence] = []
 
     public init(anchor: GeoPoint) {
         let region = MKCoordinateRegion(
@@ -92,6 +93,49 @@ public final class GISEngine {
             let t = entity.metrics["temp"] ?? 20
             return Color(hue: max(0, 0.7 - t / 60), saturation: 0.9, brightness: 0.9)
         case .orthomosaic: return .clear
+        }
+    }
+}
+
+// MARK: - Geo-fencing
+
+extension GISEngine {
+
+    /// Circular named boundary that constrains entities in a module zone.
+    /// Entities found outside every applicable fence can trigger an alert.
+    public struct GeoFence: Identifiable, Sendable {
+        public let id: UUID
+        public let name: String
+        public let center: GeoPoint
+        public let radiusMeters: Double
+        public let module: PropertyModule
+
+        public init(name: String, center: GeoPoint, radiusMeters: Double, module: PropertyModule) {
+            id = UUID()
+            self.name = name
+            self.center = center
+            self.radiusMeters = radiusMeters
+            self.module = module
+        }
+
+        public func contains(_ point: GeoPoint) -> Bool {
+            let a = CLLocation(latitude: center.latitude, longitude: center.longitude)
+            let b = CLLocation(latitude: point.latitude, longitude: point.longitude)
+            return a.distance(from: b) <= radiusMeters
+        }
+    }
+
+    public func addFence(_ fence: GeoFence) { fences.append(fence) }
+    public func removeFence(id: UUID) { fences.removeAll { $0.id == id } }
+
+    /// Returns entities that lie outside every fence applicable to their module.
+    /// An entity without any matching fence is never flagged.
+    public func entitiesOutsideFences(from entities: [PropertyEntity]) -> [PropertyEntity] {
+        guard !fences.isEmpty else { return [] }
+        return entities.filter { entity in
+            let applicable = fences.filter { $0.module == entity.kind.module }
+            guard !applicable.isEmpty else { return false }
+            return !applicable.contains { $0.contains(entity.location) }
         }
     }
 }
