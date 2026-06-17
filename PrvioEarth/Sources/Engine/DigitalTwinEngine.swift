@@ -96,6 +96,19 @@ public final class DigitalTwinEngine {
         automations.append(automation)
     }
 
+    /// Apply a single telemetry frame from SensorGateway (Matter, HomeKit, MQTT, …)
+    /// into the live twin. Skips unknown entity IDs silently.
+    public func applyTelemetry(_ frame: TelemetryFrame) {
+        guard let idx = entities.firstIndex(where: { $0.id == frame.entityID }) else { return }
+        for (key, value) in frame.metrics {
+            entities[idx].metrics[key] = value
+        }
+        if let health = frame.health {
+            entities[idx].health.score = min(1, max(0, health))
+        }
+        entities[idx].lastUpdated = frame.timestamp
+    }
+
     /// Apply a set of mutations to multiple entities in one pass — avoids
     /// triggering repeated `recomputeInsights` when wiring in external sensors.
     public func batchUpdate(_ updates: [(id: UUID, transform: (inout PropertyEntity) -> Void)]) {
@@ -178,6 +191,16 @@ public final class DigitalTwinEngine {
                 triggerTitle: trigger.title)
             automationFiredEvents.append(event)
             if automationFiredEvents.count > 50 { automationFiredEvents.removeFirst() }
+
+            // Start a Live Activity for irrigation automations so the owner
+            // can track the cycle from the Lock Screen and Dynamic Island.
+            let cfg = trigger.config.lowercased()
+            if cfg.contains("moisture") || cfg.contains("orchard") || cfg.contains("soil") {
+                LiveActivityEngine.shared.startIrrigation(
+                    automation: automation.name,
+                    zone: automation.module.rawValue.capitalized,
+                    durationMinutes: 30)
+            }
         }
     }
 

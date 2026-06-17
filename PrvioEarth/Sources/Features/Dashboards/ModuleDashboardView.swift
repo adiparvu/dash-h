@@ -57,7 +57,7 @@ public struct ModuleDashboardView: View {
         .sheet(isPresented: $showModuleDetail) {
             Group {
                 switch module {
-                case .forest: ForestAnalyticsView(twin: twin)
+                case .forest: ForestView(twin: twin)
                 case .orchard: OrchardView(twin: twin)
                 case .pond: PondDetailView(twin: twin)
                 case .garden: GardenView(twin: twin)
