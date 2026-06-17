@@ -130,6 +130,103 @@ public struct SimulatedTransport: TelemetryTransport {
     }
 }
 
+// MARK: - Entity-aware simulated transport
+
+/// A type-safe entity hint that carries only the info the transport needs.
+public struct EntityTypeHint: Sendable {
+    public var id: UUID
+    public var module: String   // PropertyModule.rawValue
+    public init(id: UUID, module: String) { self.id = id; self.module = module }
+}
+
+/// Richer simulation that emits module-appropriate metrics so the live twin
+/// looks believable without a real sensor network. Drop-in replacement for
+/// SimulatedTransport during development. Emits a frame every 4-6 seconds
+/// to keep CPU usage negligible.
+public struct TwinSimulatedTransport: TelemetryTransport {
+    public let name = "TwinSimulator"
+    public var hints: [EntityTypeHint]
+
+    public init(hints: [EntityTypeHint]) { self.hints = hints }
+
+    public func stream() -> AsyncStream<TelemetryFrame> {
+        let hints = hints
+        return AsyncStream { continuation in
+            let task = Task {
+                var cursor = 0
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .seconds(Double.random(in: 4...6)))
+                    guard !hints.isEmpty else { continue }
+                    let hint = hints[cursor % hints.count]
+                    cursor += 1
+                    continuation.yield(TelemetryFrame(
+                        entityID: hint.id,
+                        metrics: Self.metrics(for: hint.module)))
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    private static func metrics(for module: String) -> [String: Double] {
+        switch module {
+        case "pond":
+            return ["temp": .random(in: 13...24),
+                    "oxygen": .random(in: 4.5...11),
+                    "pH": .random(in: 6.4...8.8)]
+        case "forest":
+            return ["soilMoisture": .random(in: 0.28...0.82),
+                    "height_m": .random(in: 7...28)]
+        case "orchard":
+            return ["soilMoisture": .random(in: 0.22...0.78),
+                    "expectedYieldKg": .random(in: 22...90)]
+        case "garden":
+            return ["soilMoisture": .random(in: 0.28...0.74),
+                    "soilTemp": .random(in: 15...30)]
+        case "greenhouse":
+            return ["temp": .random(in: 18...36),
+                    "humidity": .random(in: 0.45...0.95),
+                    "co2Ppm": .random(in: 380...1800)]
+        case "agriculture":
+            return ["soilMoisture": .random(in: 0.18...0.72),
+                    "yieldForecast": .random(in: 1.5...10)]
+        case "home":
+            return ["powerW": .random(in: 40...600),
+                    "energyKwh": .random(in: 8...55)]
+        default:
+            return ["temp": .random(in: 14...32)]
+        }
+    }
+}
+
+// MARK: - MQTT Transport stub
+
+/// Production-ready MQTT transport stub. Wire in CocoaMQTT, SwiftNIO or
+/// MQTTNIO when a broker is available. Currently yields nothing so the
+/// gateway falls back to other registered transports.
+///
+/// Expected topic convention: `prvio/<entityUUID>/sensor`
+/// Expected payload: `{"metrics":{"temp":21.3},"health":0.88}`
+public struct MQTTTransport: TelemetryTransport {
+    public let name = "MQTT"
+    public var brokerHost: String
+    public var port: Int
+    public var topics: [String]
+
+    public init(brokerHost: String, port: Int = 1883, topics: [String] = ["prvio/#"]) {
+        self.brokerHost = brokerHost
+        self.port = port
+        self.topics = topics
+    }
+
+    public func stream() -> AsyncStream<TelemetryFrame> {
+        // TODO: Connect to broker via CocoaMQTT or MQTTNIO, parse JSON payloads,
+        // map topic segments to entity UUIDs, yield TelemetryFrames.
+        // Until the dependency is wired, this transport is intentionally silent.
+        AsyncStream { continuation in continuation.finish() }
+    }
+}
+
 // MARK: - HomeKit / Matter Transport
 
 #if os(iOS)

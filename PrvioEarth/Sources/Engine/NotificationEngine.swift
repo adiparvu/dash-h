@@ -23,6 +23,22 @@ public final class NotificationEngine {
     public func requestAuthorization() async {
         let center = UNUserNotificationCenter.current()
         _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])
+        registerCategories()
+    }
+
+    // MARK: - Categories
+
+    private func registerCategories() {
+        let openAction = UNNotificationAction(
+            identifier: "OPEN_TWIN",
+            title: "Open Twin",
+            options: [.foreground])
+        let category = UNNotificationCategory(
+            identifier: "prvio.alert",
+            actions: [openAction],
+            intentIdentifiers: [],
+            options: [])
+        UNUserNotificationCenter.current().setNotificationCategories([category])
     }
 
     // MARK: - Schedule insights as notifications
@@ -37,7 +53,7 @@ public final class NotificationEngine {
                 content.title = insight.severity == .critical ? "⚠️ " + insight.title : insight.title
                 content.body = insight.detail + (insight.recommendation.map { " " + $0 } ?? "")
                 content.sound = insight.severity == .critical ? .defaultCritical : .default
-                content.categoryIdentifier = insight.module.rawValue
+                content.categoryIdentifier = "prvio.alert"
 
                 let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
                 let request = UNNotificationRequest(
@@ -47,6 +63,12 @@ public final class NotificationEngine {
                 center.add(request)
             }
         }
+    }
+
+    // MARK: - Badge
+
+    public func updateBadge(count: Int) {
+        UNUserNotificationCenter.current().setBadgeCount(count)
     }
 
     // MARK: - Clear delivered
@@ -64,6 +86,7 @@ public final class NotificationEngine {
     private init() {}
     public func requestAuthorization() async {}
     public func schedule(_ insights: [PrvioInsight]) {}
+    public func updateBadge(count: Int) {}
     public func clearDelivered() {}
 }
 

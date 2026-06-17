@@ -30,6 +30,7 @@ public struct RootView: View {
     @State private var showSettings = false
     @State private var showTimeline = false
     @State private var showSustainability = false
+    @State private var sensorTask: Task<Void, Never>?
 
     public init() {
         let saved = PersistenceStore.shared.loadEntities()
@@ -153,17 +154,35 @@ public struct RootView: View {
                 await NotificationEngine.shared.requestAuthorization()
                 PrvioShortcutsProvider.updateAppShortcutParameters()
             }
+            let hints = twin.entities.map { EntityTypeHint(id: $0.id, module: $0.kind.module.rawValue) }
+            let gateway = SensorGateway()
+            sensorTask = Task { @MainActor in
+                await gateway.register(TwinSimulatedTransport(hints: hints))
+                for await frame in await gateway.merged() {
+                    twin.applyTelemetry(frame)
+                }
+            }
         }
         .onChange(of: twin.insights) { _, insights in
             NotificationEngine.shared.schedule(insights)
+            let alertCount = insights.filter { $0.severity >= .warning }.count
+            NotificationEngine.shared.updateBadge(count: alertCount)
             #if canImport(WatchConnectivity) && os(iOS)
             if let snap = TwinSnapshotBridge.load() {
                 WatchSessionBridge.shared.send(snap)
             }
             #endif
         }
-        .onDisappear { twin.stopLiveTelemetry(); weatherEngine.stop() }
+        .onDisappear {
+            twin.stopLiveTelemetry()
+            weatherEngine.stop()
+            sensorTask?.cancel()
+        }
         .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                NotificationEngine.shared.clearDelivered()
+                NotificationEngine.shared.updateBadge(count: 0)
+            }
             if phase == .background { PersistenceStore.shared.save(entities: twin.entities) }
         }
         .userActivity("com.prvio.earth.module") { activity in
