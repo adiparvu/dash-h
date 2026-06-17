@@ -30,10 +30,15 @@ public final class IntelligenceViewModel {
     public var dynamicSuggestions: [String] {
         var chips: [String] = []
         let live = twin.insights
+        // Module-health driven chips
         if live.contains(where: { $0.module == .pond && $0.severity >= .warning }) { chips.append("What's wrong with the pond?") }
         if live.contains(where: { $0.module == .forest && $0.severity >= .warning }) { chips.append("Show stressed trees") }
         if live.contains(where: { $0.module == .greenhouse }) { chips.append("Greenhouse status") }
         if live.contains(where: { $0.module == .agriculture && $0.severity >= .warning }) { chips.append("Check field health") }
+        // Weather-insight driven chips (from Batch 25 weather insights feed)
+        if live.contains(where: { $0.title.localizedCaseInsensitiveContains("frost") }) { chips.append("Will it frost tonight?") }
+        if live.contains(where: { $0.title.localizedCaseInsensitiveContains("dry spell") || $0.title.localizedCaseInsensitiveContains("drought") }) { chips.append("Should I irrigate today?") }
+        if live.contains(where: { $0.title.localizedCaseInsensitiveContains("heat wave") || $0.title.localizedCaseInsensitiveContains("high wind") }) { chips.append("Weather impact on crops?") }
         let fallback = ["Energy overview", "Predict pond health", "Why less apple fruit?", "Create irrigation automation"]
         for f in fallback where chips.count < 4 { chips.append(f) }
         return Array(chips.prefix(4))
@@ -59,6 +64,8 @@ public final class IntelligenceViewModel {
         // Snapshot to avoid data-race across the await suspension point.
         let entities = twin.entities
         let insights = twin.insights
+        let wx = twin.latestWeather
+        let fc = twin.latestForecast
 
         Task { @MainActor in
             let reply: AssistantMessage
@@ -66,10 +73,10 @@ public final class IntelligenceViewModel {
             if #available(iOS 26, *) {
                 reply = await ai.respondIntelligence(to: content, entities: entities, insights: insights)
             } else {
-                reply = ai.respond(to: content, entities: entities, insights: insights)
+                reply = ai.respond(to: content, entities: entities, insights: insights, weather: wx, forecast: fc)
             }
             #else
-            reply = ai.respond(to: content, entities: entities, insights: insights)
+            reply = ai.respond(to: content, entities: entities, insights: insights, weather: wx, forecast: fc)
             #endif
             isTyping = false
             withAnimation(.prvioMorph) { messages.append(reply) }

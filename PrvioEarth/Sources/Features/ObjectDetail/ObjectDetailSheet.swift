@@ -174,7 +174,7 @@ public struct ObjectDetailSheet: View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             Label("History", systemImage: "chart.xyaxis.line").font(.prvioHeadline())
             GlassCard {
-                Chart(sampleHistory()) { point in
+                Chart(historyPoints) { point in
                     AreaMark(x: .value("Time", point.timestamp), y: .value("Health", point.value))
                         .foregroundStyle(tint.gradient.opacity(0.4))
                     LineMark(x: .value("Time", point.timestamp), y: .value("Health", point.value))
@@ -185,6 +185,13 @@ public struct ObjectDetailSheet: View {
                 .frame(height: 120)
             }
         }
+    }
+
+    /// Uses real rolling telemetry once ≥5 samples have been recorded; falls back to
+    /// UUID-seeded placeholder so the chart is never empty on first open.
+    private var historyPoints: [TimeSeriesPoint] {
+        let real = twin.healthHistory(for: entity.id)
+        return real.count >= 5 ? real : sampleHistory()
     }
 
     /// 14-day health history seeded from the entity's UUID so the sparkline is

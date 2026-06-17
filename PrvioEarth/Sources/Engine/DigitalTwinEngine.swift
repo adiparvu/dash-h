@@ -38,6 +38,7 @@ public final class DigitalTwinEngine {
     private var lastCriticalTitles: Set<String> = []
     private var weatherCurrent: WeatherEngine.Current? = nil
     private var weatherForecast: [WeatherEngine.DayForecast] = []
+    private var healthHistoryBuffer: [UUID: [TimeSeriesPoint]] = [:]
 
     public init(anchor: GeoPoint, seed: [PropertyEntity], automations: [Automation], ai: AIEngine = AIEngine()) {
         self.anchor = anchor
@@ -69,6 +70,15 @@ public final class DigitalTwinEngine {
         guard !pool.isEmpty else { return 1 }
         return pool.map(\.health.score).reduce(0, +) / Double(pool.count)
     }
+
+    /// Live health-score sparkline for ObjectDetailSheet — falls back to empty before first ticks.
+    public func healthHistory(for id: UUID) -> [TimeSeriesPoint] {
+        healthHistoryBuffer[id] ?? []
+    }
+
+    /// Expose cached weather context so IntelligenceViewModel can forward it to AIEngine.
+    public var latestWeather: WeatherEngine.Current? { weatherCurrent }
+    public var latestForecast: [WeatherEngine.DayForecast] { weatherForecast }
 
     // MARK: - Mutation
 
@@ -152,6 +162,11 @@ public final class DigitalTwinEngine {
         for i in entities.indices {
             entities[i].apply(jitter: 0.04)
             entities[i].lastUpdated = .now
+            // Record health sample for live sparklines (capped at 200 ≈ 16 min at 5 s interval)
+            var buf = healthHistoryBuffer[entities[i].id] ?? []
+            buf.append(TimeSeriesPoint(timestamp: .now, value: entities[i].health.score))
+            if buf.count > 200 { buf.removeFirst() }
+            healthHistoryBuffer[entities[i].id] = buf
         }
         tickCount += 1
         // Throttle the expensive AI + snapshot write to every 3rd tick;

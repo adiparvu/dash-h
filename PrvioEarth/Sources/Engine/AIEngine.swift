@@ -239,8 +239,57 @@ public struct AIEngine: Sendable {
     /// Resolve a natural-language query against the twin. A production build
     /// routes this through Apple Intelligence with the twin as tool-callable
     /// context; this rule-based router handles the canonical example queries.
-    public func respond(to query: String, entities: [PropertyEntity], insights: [PrvioInsight]) -> AssistantMessage {
+    public func respond(
+        to query: String,
+        entities: [PropertyEntity],
+        insights: [PrvioInsight],
+        weather: WeatherEngine.Current? = nil,
+        forecast: [WeatherEngine.DayForecast] = []
+    ) -> AssistantMessage {
         let q = query.lowercased()
+
+        // Weather-contextual queries — resolved before domain-specific ones
+        if q.contains("frost") || q.contains("freeze") || q.contains("cold tonight") {
+            if let low = forecast.first?.lowC {
+                let risk = low < 0 ? "hard freeze expected" : low < 2 ? "frost risk" : "no frost risk tonight"
+                let advice = low < 2
+                    ? " Protect frost-sensitive plants and pre-heat the greenhouse before nightfall."
+                    : " All outdoor modules should be fine overnight."
+                return AssistantMessage(role: .prvio,
+                    text: "Tonight's forecast low is \(String(format: "%.1f", low))°C — \(risk).\(advice)")
+            }
+        }
+
+        if q.contains("rain") || (q.contains("irrigat") && q.contains("today")) || q.contains("should i water") {
+            if let tomorrow = forecast.first {
+                let pct = Int(tomorrow.precipProbability * 100)
+                let soilLow = entities.contains { e in
+                    switch e.detail {
+                    case .garden(let g): return g.soilMoisture < 0.45
+                    case .agriculture(let a): return a.soilMoisture < 0.40
+                    default: return false
+                    }
+                }
+                if tomorrow.precipProbability > 0.6 {
+                    return AssistantMessage(role: .prvio,
+                        text: "Rain is likely tomorrow (\(pct)% probability) — hold off on irrigation and let the forecast do the work.")
+                } else {
+                    return AssistantMessage(role: .prvio,
+                        text: "Only \(pct)% rain chance tomorrow. \(soilLow ? "Soil moisture is trending low — run irrigation tonight before the dry spell." : "Moisture levels look good for now.")")
+                }
+            }
+        }
+
+        if (q.contains("weather") || q.contains("forecast")) && !q.contains("pond") && !q.contains("greenhouse") {
+            if let wx = weather {
+                let days = forecast.prefix(3).map { "\(Int($0.highC))°/\(Int($0.lowC))°" }.joined(separator: ", ")
+                return AssistantMessage(role: .prvio,
+                    text: "Current: \(wx.condition), \(Int(wx.tempC))°C, wind \(Int(wx.windKph)) km/h, UV \(wx.uvIndex). 3-day: \(days).")
+            } else if let tomorrow = forecast.first {
+                return AssistantMessage(role: .prvio,
+                    text: "Tomorrow: \(Int(tomorrow.highC))°C high / \(Int(tomorrow.lowC))°C low, \(Int(tomorrow.precipProbability * 100))% rain probability.")
+            }
+        }
 
         if q.contains("stress") {
             let stressed = entities.filter { $0.health.status == .stressed || $0.health.status == .critical }
