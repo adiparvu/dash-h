@@ -136,46 +136,60 @@ public struct ModuleDashboardView: View {
     private var entityFlow: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: Spacing.md)], spacing: Spacing.md) {
             ForEach(entities) { entity in
-                Button { onSelectEntity(entity) } label: {
-                    VStack(alignment: .leading, spacing: Spacing.sm) {
-                        HStack {
-                            Image(systemName: entity.kind.symbol)
-                                .foregroundStyle(entity.health.score.healthColor)
-                            Spacer()
-                            Circle()
-                                .fill(entity.health.score.healthColor)
-                                .frame(width: 10, height: 10)
-                        }
-                        Text(entity.name).font(.prvioLabel()).lineLimit(1)
-                        if let m = entity.primaryMetric {
-                            HStack(spacing: 3) {
-                                Text(m.value)
-                                    .font(.system(.caption, design: .rounded).weight(.semibold))
-                                    .foregroundStyle(module.tint)
-                                Text(m.label)
-                                    .font(.prvioCaption())
-                                    .foregroundStyle(.secondary)
-                            }
-                        } else {
-                            Text("\(Int(entity.health.score * 100))% health")
-                                .font(.prvioCaption()).foregroundStyle(.secondary)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(Spacing.md)
-                    .liquidGlass(.raised, tint: module.tint, interactive: false)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(entity.name)
-                .accessibilityValue(entity.primaryMetric.map { "\($0.value) \($0.label)" }
-                    ?? "\(Int(entity.health.score * 100)) percent health")
-                .accessibilityHint("Navigates to \(entity.name) on the map")
+                EntityCell(entity: entity, tint: module.tint) { onSelectEntity(entity) }
             }
         }
         .accessibilityRotor("Entities") {
             ForEach(entities) { entity in
                 AccessibilityRotorEntry(entity.name)
             }
+        }
+    }
+}
+
+// MARK: - Entity cell (extracted to keep LazyVGrid body type-checker-friendly)
+
+private struct EntityCell: View {
+    var entity: PropertyEntity
+    var tint: Color
+    var onSelect: () -> Void
+
+    var body: some View {
+        Button { onSelect() } label: {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                HStack {
+                    Image(systemName: entity.kind.symbol)
+                        .foregroundStyle(entity.health.score.healthColor)
+                    Spacer()
+                    Circle()
+                        .fill(entity.health.score.healthColor)
+                        .frame(width: 10, height: 10)
+                }
+                Text(entity.name).font(.prvioLabel()).lineLimit(1)
+                metricLine
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(Spacing.md)
+            .liquidGlass(.raised, tint: tint, interactive: false)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(entity.name)
+        .accessibilityValue(entity.primaryMetric.map { "\($0.value) \($0.label)" }
+            ?? "\(Int(entity.health.score * 100)) percent health")
+        .accessibilityHint("Navigates to \(entity.name) on the map")
+    }
+
+    @ViewBuilder private var metricLine: some View {
+        if let m = entity.primaryMetric {
+            HStack(spacing: 3) {
+                Text(m.value)
+                    .font(.system(.caption, design: .rounded).weight(.semibold))
+                    .foregroundStyle(tint)
+                Text(m.label).font(.prvioCaption()).foregroundStyle(.secondary)
+            }
+        } else {
+            Text("\(Int(entity.health.score * 100))% health")
+                .font(.prvioCaption()).foregroundStyle(.secondary)
         }
     }
 }
