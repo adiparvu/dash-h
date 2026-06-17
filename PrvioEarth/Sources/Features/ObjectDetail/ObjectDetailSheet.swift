@@ -24,6 +24,9 @@ public struct ObjectDetailSheet: View {
         self.entity = entity; self.twin = twin
     }
 
+    @State private var showInspect = false
+    @State private var showAutomation = false
+
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.lg) {
@@ -41,6 +44,18 @@ public struct ObjectDetailSheet: View {
                 .overlay(RoundedRectangle(cornerRadius: 40, style: .continuous)
                     .fill(tint.opacity(0.12)))
                 .ignoresSafeArea()
+        }
+        .sheet(isPresented: $showInspect) {
+            InspectPanel(entity: entity, twin: twin)
+                .presentationDetents([.medium, .large])
+                .presentationBackground(.clear)
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showAutomation) {
+            AutomationProposalView(entity: entity, twin: twin)
+                .presentationDetents([.medium])
+                .presentationBackground(.clear)
+                .presentationDragIndicator(.visible)
         }
     }
 
@@ -192,11 +207,357 @@ public struct ObjectDetailSheet: View {
     private var maintenanceSection: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             Label("Actions", systemImage: "wrench.and.screwdriver.fill").font(.prvioHeadline())
-            HStack {
-                GlassButton("Inspect", systemImage: "camera.viewfinder", tint: tint) {}
-                GlassButton("Automate", systemImage: "bolt.badge.automatic", tint: tint) {}
-                GlassButton("Log", systemImage: "note.text", tint: tint) {}
+            HStack(spacing: Spacing.sm) {
+                GlassButton("Inspect", systemImage: "camera.viewfinder", tint: tint) { showInspect = true }
+                GlassButton("Automate", systemImage: "bolt.badge.automatic", tint: tint) { showAutomation = true }
+                ShareLink(item: entityTelemetryText,
+                          subject: Text("Entity Report"),
+                          message: Text("Exported from PRVIO Earth")) {
+                    HStack(spacing: Spacing.sm) {
+                        Image(systemName: "note.text")
+                        Text("Log")
+                    }
+                    .font(.prvioLabel())
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.vertical, Spacing.sm + 2)
+                    .liquidGlass(.floating, tint: tint, interactive: false)
+                }
             }
         }
+    }
+
+    private var entityTelemetryText: String {
+        var lines = [
+            "PRVIO Earth — Entity Log",
+            "Entity: \(entity.name)",
+            "Module: \(entity.kind.module.title)",
+            "Health: \(Int(entity.health.score * 100))%",
+            "Status: \(entity.health.status.rawValue.capitalized)",
+            "Date: \(Date.now.formatted(date: .long, time: .shortened))",
+        ]
+        for (key, value) in entity.metrics.sorted(by: { $0.key < $1.key }) {
+            lines.append("\(key): \(String(format: "%.2f", value))")
+        }
+        return lines.joined(separator: "\n")
+    }
+}
+
+// MARK: - Inspect Panel
+
+private struct DiagnosticItem {
+    var title: String
+    var value: String
+    var status: DiagStatus
+    enum DiagStatus { case ok, warning, critical }
+}
+
+private struct DiagnosticRow: View {
+    var item: DiagnosticItem
+
+    private var statusColor: Color {
+        switch item.status {
+        case .ok: return .healthThriving
+        case .warning: return .healthStressed
+        case .critical: return .healthCritical
+        }
+    }
+    private var statusSymbol: String {
+        switch item.status {
+        case .ok: return "checkmark.circle.fill"
+        case .warning: return "exclamationmark.triangle.fill"
+        case .critical: return "xmark.circle.fill"
+        }
+    }
+
+    var body: some View {
+        HStack {
+            Image(systemName: statusSymbol).foregroundStyle(statusColor)
+            Text(item.title).font(.prvioLabel())
+            Spacer()
+            Text(item.value).font(.prvioCaption()).foregroundStyle(.secondary)
+        }
+    }
+}
+
+private struct InspectPanel: View {
+    var entity: PropertyEntity
+    var twin: DigitalTwinEngine
+    @Environment(\.dismiss) private var dismiss
+
+    private var tint: Color { entity.kind.module.tint }
+    private var related: [PrvioInsight] {
+        twin.insights.filter { $0.relatedEntityIDs.contains(entity.id) }
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Spacing.lg) {
+                panelHeader
+                GlassCard(tint: tint) {
+                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                        Label("Current Status", systemImage: entity.kind.symbol)
+                            .font(.prvioHeadline())
+                        Text(inspectSummary).font(.prvioLabel()).foregroundStyle(.secondary)
+                    }
+                }
+                if !diagnosticItems.isEmpty {
+                    GlassCard(tint: tint) {
+                        VStack(alignment: .leading, spacing: Spacing.sm) {
+                            Label("Diagnostics", systemImage: "stethoscope").font(.prvioHeadline())
+                            ForEach(diagnosticItems, id: \.title) { DiagnosticRow(item: $0) }
+                        }
+                    }
+                }
+                if !related.isEmpty {
+                    GlassCard(tint: tint) {
+                        VStack(alignment: .leading, spacing: Spacing.sm) {
+                            Label("AI Observations", systemImage: "sparkles")
+                                .font(.prvioHeadline()).foregroundStyle(tint)
+                            ForEach(related) { insight in
+                                Text("• \(insight.title)").font(.prvioCaption()).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(Spacing.lg)
+        }
+        .background {
+            RoundedRectangle(cornerRadius: 40, style: .continuous)
+                .fill(.ultraThinMaterial).ignoresSafeArea()
+        }
+    }
+
+    private var panelHeader: some View {
+        HStack {
+            Text("Inspection Report").font(.prvioTitle())
+            Spacer()
+            Button { dismiss() } label: {
+                Image(systemName: "xmark.circle.fill").font(.title2).foregroundStyle(.secondary)
+            }.buttonStyle(.plain)
+        }
+    }
+
+    private var inspectSummary: String {
+        switch entity.detail {
+        case .tree(let t):
+            return "\(entity.name) is a \(t.species) standing \(String(format: "%.1f", t.heightMeters)) m tall, \(t.ageYears) yr old. Health: \(Int(entity.health.score * 100))%."
+        case .orchard(let o):
+            return "\(entity.name) (\(o.species)) in \(o.phenophase.rawValue) phase. Expected yield \(String(format: "%.0f", o.expectedYieldKg)) kg. Irrigation \(o.irrigationActive ? "active" : "off")."
+        case .pond(let p):
+            return "\(entity.name) at \(String(format: "%.1f", p.waterTempC))°C, pH \(String(format: "%.1f", p.pH)), O₂ \(String(format: "%.1f", p.dissolvedOxygenMgL)) mg/L. \(p.fishCount) fish."
+        case .device(let d):
+            return "\(entity.name) (\(d.protocolType.rawValue)) is \(d.isOnline ? "online" : "offline"). Firmware \(d.firmware)."
+        case .garden(let g):
+            return "\(entity.name) soil moisture \(Int(g.soilMoisture * 100))%, pH \(String(format: "%.1f", g.soilPH)), \(String(format: "%.0f", g.soilTemperatureC))°C."
+        case .greenhouse(let g):
+            return "\(entity.name) at \(String(format: "%.1f", g.temperatureC))°C, \(Int(g.humidity * 100))% humidity, CO₂ \(String(format: "%.0f", g.co2Ppm)) ppm."
+        case .agriculture(let a):
+            return "\(entity.name) (\(a.cropType)) in \(a.growthStage.rawValue) over \(String(format: "%.1f", a.fieldAreaHa)) ha. Forecast \(String(format: "%.1f", a.yieldForecastTha)) t/ha."
+        case .none:
+            return "\(entity.name) health: \(Int(entity.health.score * 100))%."
+        }
+    }
+
+    private var diagnosticItems: [DiagnosticItem] {
+        switch entity.detail {
+        case .pond(let p):
+            return [
+                DiagnosticItem(title: "Dissolved Oxygen",
+                    value: "\(String(format: "%.1f", p.dissolvedOxygenMgL)) mg/L",
+                    status: p.dissolvedOxygenMgL < 4 ? .critical : p.dissolvedOxygenMgL < 6 ? .warning : .ok),
+                DiagnosticItem(title: "pH Level",
+                    value: String(format: "%.1f", p.pH),
+                    status: (p.pH < 6 || p.pH > 9) ? .critical : (p.pH < 6.5 || p.pH > 8.5) ? .warning : .ok),
+            ]
+        case .tree(let t):
+            return [
+                DiagnosticItem(title: "Carbon Storage",
+                    value: "\(String(format: "%.0f", t.carbonStorageKg)) kg", status: .ok),
+                DiagnosticItem(title: "Soil pH",
+                    value: String(format: "%.1f", t.soilPH),
+                    status: (t.soilPH < 5.5 || t.soilPH > 7.5) ? .warning : .ok),
+            ]
+        case .greenhouse(let g):
+            return [
+                DiagnosticItem(title: "CO₂ Level",
+                    value: "\(String(format: "%.0f", g.co2Ppm)) ppm",
+                    status: g.co2Ppm > 1500 ? .critical : g.co2Ppm > 1200 ? .warning : .ok),
+                DiagnosticItem(title: "Humidity",
+                    value: "\(Int(g.humidity * 100))%",
+                    status: (g.humidity < 0.4 || g.humidity > 0.9) ? .warning : .ok),
+            ]
+        default:
+            return []
+        }
+    }
+}
+
+// MARK: - Automation Proposal
+
+private struct AutomationProposalView: View {
+    var entity: PropertyEntity
+    var twin: DigitalTwinEngine
+    @Environment(\.dismiss) private var dismiss
+    @State private var didCreate = false
+
+    private var tint: Color { entity.kind.module.tint }
+
+    private var proposedAutomation: Automation {
+        switch entity.detail {
+        case .orchard:
+            return Automation(name: "Irrigation Trigger — \(entity.name)", nodes: [
+                .init(role: .trigger, title: "Soil moisture < 40%", config: "threshold:0.4"),
+                .init(role: .condition, title: "No rain forecast 24 h", config: "weather:noRain"),
+                .init(role: .action, title: "Start drip irrigation 30 min", config: "duration:1800"),
+            ], module: entity.kind.module)
+        case .pond:
+            return Automation(name: "Aerator Trigger — \(entity.name)", nodes: [
+                .init(role: .trigger, title: "Dissolved O₂ < 5 mg/L", config: "threshold:5.0"),
+                .init(role: .condition, title: "Aerator not running", config: "device:aerator"),
+                .init(role: .action, title: "Activate pond aerator 1 h", config: "duration:3600"),
+            ], module: .pond)
+        case .greenhouse:
+            return Automation(name: "Vent Control — \(entity.name)", nodes: [
+                .init(role: .trigger, title: "Temperature > 28°C", config: "threshold:28"),
+                .init(role: .condition, title: "Grow lights active", config: "device:lights"),
+                .init(role: .action, title: "Open roof vents", config: "device:vents"),
+            ], module: .greenhouse)
+        case .device:
+            return Automation(name: "Device Alert — \(entity.name)", nodes: [
+                .init(role: .trigger, title: "Device goes offline", config: "status:offline"),
+                .init(role: .condition, title: "No alert sent in 1 h", config: "cooldown:3600"),
+                .init(role: .action, title: "Send push notification", config: "alert:push"),
+            ], module: .home)
+        case .garden:
+            return Automation(name: "Watering — \(entity.name)", nodes: [
+                .init(role: .trigger, title: "Soil moisture < 35%", config: "threshold:0.35"),
+                .init(role: .condition, title: "Between 6 am and 9 am", config: "time:06:00-09:00"),
+                .init(role: .action, title: "Run garden irrigation 15 min", config: "duration:900"),
+            ], module: .garden)
+        case .agriculture:
+            return Automation(name: "Field Monitor — \(entity.name)", nodes: [
+                .init(role: .trigger, title: "Yield forecast drops > 10%", config: "threshold:0.1"),
+                .init(role: .condition, title: "Crop in active growth", config: "stage:growth"),
+                .init(role: .action, title: "Flag for agronomist review", config: "alert:agronomist"),
+            ], module: .agriculture)
+        default:
+            return Automation(name: "Health Watch — \(entity.name)", nodes: [
+                .init(role: .trigger, title: "Health score < 40%", config: "threshold:0.4"),
+                .init(role: .condition, title: "Alert not sent in 24 h", config: "cooldown:86400"),
+                .init(role: .action, title: "Send maintenance alert", config: "alert:push"),
+            ], module: entity.kind.module)
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.lg) {
+            proposalHeader
+            Text("PRVIO Intelligence suggests this automation for \(entity.name):")
+                .font(.prvioLabel()).foregroundStyle(.secondary)
+            nodeFlow
+            if didCreate {
+                Label("Automation created!", systemImage: "checkmark.circle.fill")
+                    .font(.prvioLabel()).foregroundStyle(.healthThriving)
+                    .transition(.scale.combined(with: .opacity))
+            }
+            footerButtons
+        }
+        .padding(Spacing.lg)
+        .background {
+            RoundedRectangle(cornerRadius: 40, style: .continuous)
+                .fill(.ultraThinMaterial).ignoresSafeArea()
+        }
+    }
+
+    private var proposalHeader: some View {
+        HStack {
+            Label("Automation Proposal", systemImage: "bolt.badge.automatic").font(.prvioTitle())
+            Spacer()
+            Button { dismiss() } label: {
+                Image(systemName: "xmark.circle.fill").font(.title2).foregroundStyle(.secondary)
+            }.buttonStyle(.plain)
+        }
+    }
+
+    private var nodeFlow: some View {
+        VStack(spacing: 2) {
+            ForEach(Array(proposedAutomation.nodes.enumerated()), id: \.offset) { idx, node in
+                NodeRowAndArrow(node: node, isLast: idx == proposedAutomation.nodes.count - 1)
+            }
+        }
+    }
+
+    private var footerButtons: some View {
+        HStack {
+            Button { dismiss() } label: {
+                Text("Cancel").font(.prvioLabel())
+                    .padding(.horizontal, Spacing.md).padding(.vertical, Spacing.sm + 2)
+                    .liquidGlass(.floating, tint: .prvioMist, interactive: false)
+            }.buttonStyle(.plain)
+            Spacer()
+            Button {
+                let a = proposedAutomation
+                twin.addAutomation(a)
+                withAnimation(.prvioMorph) { didCreate = true }
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 1_500_000_000)
+                    dismiss()
+                }
+            } label: {
+                HStack(spacing: Spacing.sm) {
+                    Image(systemName: "plus.circle.fill")
+                    Text("Create Automation")
+                }
+                .font(.prvioLabel())
+                .padding(.horizontal, Spacing.md).padding(.vertical, Spacing.sm + 2)
+                .liquidGlass(.floating, tint: .prvioHorizon, interactive: false)
+            }.buttonStyle(.plain).disabled(didCreate)
+        }
+    }
+}
+
+private struct NodeRowAndArrow: View {
+    var node: Automation.Node
+    var isLast: Bool
+
+    var body: some View {
+        VStack(spacing: 2) {
+            AutomationNodeRow(node: node)
+            if !isLast {
+                Image(systemName: "arrow.down").foregroundStyle(.secondary).font(.caption)
+                    .frame(maxWidth: .infinity, alignment: .center)
+            }
+        }
+    }
+}
+
+private struct AutomationNodeRow: View {
+    var node: Automation.Node
+
+    private var color: Color {
+        switch node.role {
+        case .trigger: return .domainEnergy
+        case .condition: return .prvioHorizon
+        case .action: return .healthThriving
+        }
+    }
+    private var symbol: String {
+        switch node.role {
+        case .trigger: return "bolt.fill"
+        case .condition: return "checklist"
+        case .action: return "play.fill"
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: Spacing.sm) {
+            Image(systemName: symbol).foregroundStyle(color).frame(width: 20)
+            Text(node.role.rawValue.capitalized).font(.prvioCaption()).foregroundStyle(color)
+                .frame(width: 64, alignment: .leading)
+            Text(node.title).font(.prvioLabel()).lineLimit(1)
+        }
+        .padding(Spacing.md)
+        .liquidGlass(.raised, tint: color, interactive: false)
     }
 }

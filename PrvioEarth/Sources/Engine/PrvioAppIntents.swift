@@ -88,6 +88,44 @@ public struct OpenModuleIntent: AppIntent {
     }
 }
 
+// MARK: - Energy Status
+
+public struct EnergyStatusIntent: AppIntent {
+    public static let title: LocalizedStringResource = "Energy Status"
+    public static let description = IntentDescription(
+        "Get today's solar energy production for your property.")
+    public static var openAppWhenRun: Bool = false
+
+    public init() {}
+
+    public func perform() async throws -> some IntentResult & ProvidesDialog {
+        let snap = TwinSnapshotBridge.load() ?? TwinSnapshot.placeholder
+        let kwh = String(format: "%.1f", snap.energyKwh)
+        return .result(dialog: IntentDialog(
+            "Your property has produced \(kwh) kWh today. Overall health is \(Int(snap.propertyHealth * 100))%."))
+    }
+}
+
+// MARK: - Active Alerts
+
+public struct AlertsIntent: AppIntent {
+    public static let title: LocalizedStringResource = "Active Alerts"
+    public static let description = IntentDescription(
+        "Get the number of active alerts and the top insight for your Digital Twin.")
+    public static var openAppWhenRun: Bool = false
+
+    public init() {}
+
+    public func perform() async throws -> some IntentResult & ProvidesDialog {
+        let snap = TwinSnapshotBridge.load() ?? TwinSnapshot.placeholder
+        if snap.alerts == 0 {
+            return .result(dialog: IntentDialog("No active alerts. \(snap.topInsight)."))
+        }
+        let aStr = snap.alerts == 1 ? "1 active alert" : "\(snap.alerts) active alerts"
+        return .result(dialog: IntentDialog("\(aStr). Top insight: \(snap.topInsight)."))
+    }
+}
+
 // MARK: - Shortcuts Provider
 
 public struct PrvioShortcutsProvider: AppShortcutsProvider {
@@ -120,5 +158,23 @@ public struct PrvioShortcutsProvider: AppShortcutsProvider {
             ],
             shortTitle: "Open Module",
             systemImageName: "mappin.circle.fill")
+
+        AppShortcut(
+            intent: EnergyStatusIntent(),
+            phrases: [
+                "Energy status in \(.applicationName)",
+                "How much energy has my property produced with \(.applicationName)",
+            ],
+            shortTitle: "Energy Status",
+            systemImageName: "bolt.fill")
+
+        AppShortcut(
+            intent: AlertsIntent(),
+            phrases: [
+                "Any alerts on \(.applicationName)",
+                "Check \(.applicationName) alerts",
+            ],
+            shortTitle: "Active Alerts",
+            systemImageName: "bell.badge.fill")
     }
 }
