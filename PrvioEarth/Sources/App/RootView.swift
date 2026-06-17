@@ -28,6 +28,8 @@ public struct RootView: View {
     @State private var showDrone = false
     @State private var showEditor = false
     @State private var showSettings = false
+    @State private var showTimeline = false
+    @State private var showSustainability = false
 
     public init() {
         let saved = PersistenceStore.shared.loadEntities()
@@ -86,6 +88,12 @@ public struct RootView: View {
             }, onOpenSettings: {
                 showSystems = false
                 showSettings = true
+            }, onOpenTimeline: {
+                showSystems = false
+                showTimeline = true
+            }, onOpenSustainability: {
+                showSystems = false
+                showSustainability = true
             }, onFocusModule: { m in
                 showSystems = false
                 withAnimation(.prvioMorph) { module = m }
@@ -108,6 +116,18 @@ public struct RootView: View {
         }
         .sheet(isPresented: $showDrone) {
             DroneModeView(vm: DroneModeViewModel(vision: vision, gis: gis, twin: twin))
+                .presentationDetents([.large])
+                .presentationBackground(.clear)
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showTimeline) {
+            PropertyTimelineView(twin: twin)
+                .presentationDetents([.large])
+                .presentationBackground(.clear)
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showSustainability) {
+            SustainabilityView(twin: twin)
                 .presentationDetents([.large])
                 .presentationBackground(.clear)
                 .presentationDragIndicator(.visible)

@@ -19,6 +19,8 @@ public struct SystemsHubView: View {
     var onOpenDrone: () -> Void
     var onOpenEditor: () -> Void
     var onOpenSettings: () -> Void
+    var onOpenTimeline: () -> Void
+    var onOpenSustainability: () -> Void
     var onFocusModule: (PropertyModule) -> Void
 
     public init(twin: DigitalTwinEngine,
@@ -28,6 +30,8 @@ public struct SystemsHubView: View {
                 onOpenDrone: @escaping () -> Void = {},
                 onOpenEditor: @escaping () -> Void = {},
                 onOpenSettings: @escaping () -> Void = {},
+                onOpenTimeline: @escaping () -> Void = {},
+                onOpenSustainability: @escaping () -> Void = {},
                 onFocusModule: @escaping (PropertyModule) -> Void) {
         self.twin = twin
         self.weatherEngine = weatherEngine
@@ -36,6 +40,8 @@ public struct SystemsHubView: View {
         self.onOpenDrone = onOpenDrone
         self.onOpenEditor = onOpenEditor
         self.onOpenSettings = onOpenSettings
+        self.onOpenTimeline = onOpenTimeline
+        self.onOpenSustainability = onOpenSustainability
         self.onFocusModule = onFocusModule
     }
 
@@ -71,6 +77,12 @@ public struct SystemsHubView: View {
                 toolRow(icon: "pencil.and.outline", title: "Build your Twin",
                         subtitle: "Place trees, ponds, devices on the map",
                         tint: .domainGarden, action: onOpenEditor)
+                toolRow(icon: "clock.arrow.trianglehead.counterclockwise.rotate.90", title: "Timeline",
+                        subtitle: "\(twin.automationFiredEvents.count) events · automations & insights",
+                        tint: .prvioHorizon, action: onOpenTimeline)
+                toolRow(icon: "leaf.fill", title: "Sustainability",
+                        subtitle: "Carbon, energy, water & biodiversity score",
+                        tint: .domainForest, action: onOpenSustainability)
                 toolRow(icon: "gearshape.fill", title: "Settings",
                         subtitle: "Units, telemetry interval, notifications",
                         tint: .prvioHorizon, action: onOpenSettings)
