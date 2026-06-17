@@ -8,6 +8,7 @@
 //
 
 import ActivityKit
+import Foundation
 
 public struct IrrigationAttributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable {
