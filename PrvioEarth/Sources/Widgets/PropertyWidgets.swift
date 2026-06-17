@@ -12,26 +12,7 @@
 
 import WidgetKit
 import SwiftUI
-import PrvioEarthCore   // design tokens (Color/Spacing/fonts) come from the shared framework
-
-// MARK: - Snapshot model (shared via App Group)
-
-public struct TwinSnapshot: Codable, Sendable {
-    public var propertyHealth: Double
-    public var alerts: Int
-    public var topInsight: String
-    public var energyKwh: Double
-    public var capturedAt: Date
-
-    public init(propertyHealth: Double, alerts: Int, topInsight: String, energyKwh: Double, capturedAt: Date = .now) {
-        self.propertyHealth = propertyHealth; self.alerts = alerts
-        self.topInsight = topInsight; self.energyKwh = energyKwh; self.capturedAt = capturedAt
-    }
-
-    public static let placeholder = TwinSnapshot(
-        propertyHealth: 0.86, alerts: 2,
-        topInsight: "Orchard soil moisture low", energyKwh: 32.6)
-}
+import PrvioEarthCore   // TwinSnapshot, TwinSnapshotBridge, design tokens
 
 // MARK: - Timeline
 
@@ -45,28 +26,11 @@ struct PropertyProvider: TimelineProvider {
         PropertyEntry(date: .now, snapshot: .placeholder)
     }
     func getSnapshot(in context: Context, completion: @escaping (PropertyEntry) -> Void) {
-        completion(PropertyEntry(date: .now, snapshot: SnapshotStore.load() ?? .placeholder))
+        completion(PropertyEntry(date: .now, snapshot: TwinSnapshotBridge.load() ?? .placeholder))
     }
     func getTimeline(in context: Context, completion: @escaping (Timeline<PropertyEntry>) -> Void) {
-        let entry = PropertyEntry(date: .now, snapshot: SnapshotStore.load() ?? .placeholder)
+        let entry = PropertyEntry(date: .now, snapshot: TwinSnapshotBridge.load() ?? .placeholder)
         completion(Timeline(entries: [entry], policy: .after(.now.addingTimeInterval(900))))
-    }
-}
-
-/// Reads/writes the snapshot to the shared App Group container.
-enum SnapshotStore {
-    static let suite = "group.com.prvio.earth"
-    static let key = "twin.snapshot"
-
-    static func save(_ snapshot: TwinSnapshot) {
-        guard let data = try? JSONEncoder().encode(snapshot),
-              let defaults = UserDefaults(suiteName: suite) else { return }
-        defaults.set(data, forKey: key)
-    }
-    static func load() -> TwinSnapshot? {
-        guard let defaults = UserDefaults(suiteName: suite),
-              let data = defaults.data(forKey: key) else { return nil }
-        return try? JSONDecoder().decode(TwinSnapshot.self, from: data)
     }
 }
 

@@ -101,6 +101,8 @@ public struct FloatingNavBar: View {
                         }
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(module.title)
+                    .accessibilityAddTraits(isSelected ? .isSelected : [])
                 }
             }
             .padding(6)

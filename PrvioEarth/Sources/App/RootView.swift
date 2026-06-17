@@ -113,12 +113,20 @@ public struct RootView: View {
             OnboardingView { _ in showOnboarding = false }
         }
         .onAppear {
-            twin.startLiveTelemetry()
+            let storedInterval = UserDefaults.standard.double(forKey: "telemetryIntervalSec")
+            let seconds = storedInterval > 0 ? storedInterval : 5.0
+            twin.startLiveTelemetry(interval: .seconds(seconds))
             intelligenceVM.onHighlight = { ids in
                 mapVM.applyHighlight(ids)
                 withAnimation(.prvioMorph) { module = .map }
             }
-            Task { await NotificationEngine.shared.requestAuthorization() }
+            Task {
+                await NotificationEngine.shared.requestAuthorization()
+                PrvioShortcutsProvider.updateAppShortcutParameters()
+            }
+        }
+        .onChange(of: twin.insights) { _, insights in
+            NotificationEngine.shared.schedule(insights)
         }
         .onDisappear { twin.stopLiveTelemetry() }
         .onChange(of: scenePhase) { _, phase in

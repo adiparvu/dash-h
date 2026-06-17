@@ -108,6 +108,7 @@ public struct MetricTile: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(label)
         .accessibilityValue("\(value)\(unit.map { " \($0)" } ?? "")")
+        .accessibilityHint(trend == .down ? "Declining" : trend == .up ? "Improving" : "")
     }
 }
 
@@ -219,6 +220,9 @@ public struct RiskBadge: View {
         }
         .padding(Spacing.md)
         .liquidGlass(.raised, tint: count > 0 ? tint : .prvioMist, interactive: false)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(label)
+        .accessibilityValue("\(count)")
     }
 }
 

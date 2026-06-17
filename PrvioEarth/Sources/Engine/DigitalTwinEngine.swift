@@ -38,6 +38,7 @@ public final class DigitalTwinEngine {
         self.automations = automations
         self.ai = ai
         recomputeInsights()
+        SpotlightBridge.index(seed)
     }
 
     // MARK: - Queries
@@ -73,9 +74,11 @@ public final class DigitalTwinEngine {
     public func addEntity(_ entity: PropertyEntity) {
         entities.append(entity)
         recomputeInsights()
+        SpotlightBridge.index(entities)
     }
 
     public func removeEntity(_ id: UUID) {
+        SpotlightBridge.deindex([id])
         entities.removeAll { $0.id == id }
         recomputeInsights()
     }
@@ -117,6 +120,18 @@ public final class DigitalTwinEngine {
 
     private func recomputeInsights() {
         insights = ai.deriveInsights(from: entities)
+        pushSnapshot()
+    }
+
+    private func pushSnapshot() {
+        let total = entities.isEmpty ? 1.0 : entities.map(\.health.score).reduce(0, +) / Double(entities.count)
+        let energy = entities.compactMap { $0.metrics["energyKwh"] }.reduce(0, +)
+        let snap = TwinSnapshot(
+            propertyHealth: total,
+            alerts: insights.filter { $0.severity == .critical }.count,
+            topInsight: insights.first?.title ?? "All systems healthy",
+            energyKwh: energy)
+        TwinSnapshotBridge.save(snap)
     }
 }
 
