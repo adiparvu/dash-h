@@ -11,6 +11,9 @@
 //
 
 import Foundation
+#if canImport(FoundationModels)
+import FoundationModels
+#endif
 
 public struct AIEngine: Sendable {
 
@@ -273,6 +276,41 @@ public struct AIEngine: Sendable {
             highlightedEntityIDs: topInsight?.relatedEntityIDs ?? [])
     }
 }
+
+// MARK: - Apple Intelligence path
+
+#if canImport(FoundationModels)
+extension AIEngine {
+    /// On-device Apple Intelligence response using Foundation Models.
+    /// Feeds entity context as instructions so the model understands the twin
+    /// without sending data off-device. Falls back to the rule engine on any
+    /// error (model unavailable, unsupported hardware, inference timeout).
+    @available(iOS 26, *)
+    public func respondIntelligence(
+        to query: String,
+        entities: [PropertyEntity],
+        insights: [PrvioInsight]
+    ) async -> AssistantMessage {
+        let stressed = entities.filter {
+            $0.health.status == .stressed || $0.health.status == .critical
+        }
+        let insightLines = insights.prefix(3).map { "• \($0.title)" }.joined(separator: " ")
+        let instructions = """
+        You are PRVIO Intelligence, a private on-device property advisor for a digital twin \
+        ecosystem. Answer in 1–2 sentences, concisely and helpfully. \
+        Property context: \(entities.count) entities, \(stressed.count) currently stressed. \
+        Recent insights: \(insightLines)
+        """
+        do {
+            let session = LanguageModelSession(instructions: instructions)
+            let response = try await session.respond(to: query)
+            return AssistantMessage(role: .prvio, text: response.content)
+        } catch {
+            return respond(to: query, entities: entities, insights: insights)
+        }
+    }
+}
+#endif
 
 private extension Optional where Wrapped == EntityDetail {
     var orchardSpecies: String? {

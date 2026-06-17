@@ -17,6 +17,7 @@ public final class IntelligenceViewModel {
         .init(role: .prvio, text: "Hello — I'm PRVIO Intelligence. Ask me anything about your property. Try \"Show stressed trees\" or \"Predict pond health for next week.\"")
     ]
     public var draft: String = ""
+    public var isTyping: Bool = false
 
     private let twin: DigitalTwinEngine
     private let ai = AIEngine()
@@ -53,10 +54,27 @@ public final class IntelligenceViewModel {
         guard !content.isEmpty else { return }
         messages.append(.init(role: .user, text: content))
         draft = ""
+        isTyping = true
 
-        let reply = ai.respond(to: content, entities: twin.entities, insights: twin.insights)
-        withAnimation(.prvioMorph) { messages.append(reply) }
-        if !reply.highlightedEntityIDs.isEmpty { onHighlight(reply.highlightedEntityIDs) }
+        // Snapshot to avoid data-race across the await suspension point.
+        let entities = twin.entities
+        let insights = twin.insights
+
+        Task { @MainActor in
+            let reply: AssistantMessage
+            #if canImport(FoundationModels)
+            if #available(iOS 26, *) {
+                reply = await ai.respondIntelligence(to: content, entities: entities, insights: insights)
+            } else {
+                reply = ai.respond(to: content, entities: entities, insights: insights)
+            }
+            #else
+            reply = ai.respond(to: content, entities: entities, insights: insights)
+            #endif
+            isTyping = false
+            withAnimation(.prvioMorph) { messages.append(reply) }
+            if !reply.highlightedEntityIDs.isEmpty { onHighlight(reply.highlightedEntityIDs) }
+        }
     }
 }
 
@@ -73,11 +91,19 @@ public struct IntelligenceView: View {
                         ForEach(vm.messages) { msg in
                             MessageBubble(message: msg, entityNames: vm.entityNameMap).id(msg.id)
                         }
+                        if vm.isTyping {
+                            TypingBubble()
+                                .id("typing")
+                                .transition(.opacity.combined(with: .scale(scale: 0.9, anchor: .bottomLeading)))
+                        }
                     }
                     .padding(Spacing.md)
                 }
                 .onChange(of: vm.messages.count) { _, _ in
                     if let last = vm.messages.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } }
+                }
+                .onChange(of: vm.isTyping) { _, typing in
+                    if typing { withAnimation { proxy.scrollTo("typing", anchor: .bottom) } }
                 }
             }
             suggestionRow
@@ -120,6 +146,34 @@ public struct IntelligenceView: View {
         .padding(Spacing.md)
     }
 }
+
+// MARK: - Typing indicator
+
+private struct TypingBubble: View {
+    var body: some View {
+        HStack {
+            TimelineView(.animation(minimumInterval: 0.45)) { ctx in
+                let phase = Int(ctx.date.timeIntervalSinceReferenceDate / 0.45) % 3
+                HStack(spacing: 5) {
+                    ForEach(0..<3, id: \.self) { i in
+                        Circle()
+                            .fill(Color.secondary)
+                            .frame(width: 7, height: 7)
+                            .scaleEffect(phase == i ? 1.4 : 0.7)
+                            .animation(.easeInOut(duration: 0.3), value: phase)
+                    }
+                }
+                .padding(.horizontal, Spacing.md)
+                .padding(.vertical, Spacing.sm + 4)
+                .liquidGlass(.raised, tint: .prvioMist, interactive: false)
+            }
+            Spacer(minLength: 40)
+        }
+        .accessibilityLabel("PRVIO Intelligence is typing")
+    }
+}
+
+// MARK: - Message bubble
 
 private struct MessageBubble: View {
     var message: AssistantMessage
