@@ -145,6 +145,53 @@ public struct GreenhouseProfile: Codable, Hashable, Sendable {
     }
 }
 
+// MARK: - Smart Agriculture
+
+public struct AgricultureProfile: Codable, Hashable, Sendable {
+    public enum GrowthStage: String, Codable, CaseIterable, Sendable {
+        case germination, seedling, vegetative, flowering, grain, ripening, harvest
+        public var icon: String {
+            switch self {
+            case .germination: return "circle.dotted"
+            case .seedling:    return "leaf"
+            case .vegetative:  return "leaf.fill"
+            case .flowering:   return "camera.macro"
+            case .grain:       return "circle.hexagongrid.fill"
+            case .ripening:    return "sun.max.fill"
+            case .harvest:     return "basket.fill"
+            }
+        }
+    }
+    public struct NPKProfile: Codable, Hashable, Sendable {
+        public var nitrogen: Double    // kg/ha
+        public var phosphorus: Double  // kg/ha
+        public var potassium: Double   // kg/ha
+        public init(nitrogen: Double, phosphorus: Double, potassium: Double) {
+            self.nitrogen = nitrogen; self.phosphorus = phosphorus; self.potassium = potassium
+        }
+    }
+
+    public var cropType: String
+    public var fieldAreaHa: Double
+    public var soilType: String
+    public var growthStage: GrowthStage
+    public var npk: NPKProfile
+    public var soilMoisture: Double           // 0...1
+    public var plantingDate: Date
+    public var expectedHarvest: Date
+    public var irrigationEfficiency: Double   // 0...1
+    public var yieldForecastTha: Double
+
+    public init(cropType: String, fieldAreaHa: Double, soilType: String, growthStage: GrowthStage,
+                npk: NPKProfile, soilMoisture: Double, plantingDate: Date, expectedHarvest: Date,
+                irrigationEfficiency: Double, yieldForecastTha: Double) {
+        self.cropType = cropType; self.fieldAreaHa = fieldAreaHa; self.soilType = soilType
+        self.growthStage = growthStage; self.npk = npk; self.soilMoisture = soilMoisture
+        self.plantingDate = plantingDate; self.expectedHarvest = expectedHarvest
+        self.irrigationEfficiency = irrigationEfficiency; self.yieldForecastTha = yieldForecastTha
+    }
+}
+
 // MARK: - Time Series (historical data)
 
 public struct TimeSeriesPoint: Codable, Hashable, Identifiable, Sendable {

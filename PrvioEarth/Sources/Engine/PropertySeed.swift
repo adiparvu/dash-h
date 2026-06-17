@@ -23,6 +23,7 @@ public enum PropertySeed {
         out.append(contentsOf: devices())
         out.append(contentsOf: gardenBeds())
         out.append(contentsOf: greenhouseZones())
+        out.append(contentsOf: agricultureFields())
         return out
     }
 
@@ -98,6 +99,40 @@ public enum PropertySeed {
                 location: offset(55, -45),
                 health: HealthState(score: 0.88),
                 metrics: ["colonyStrength": 0.88, "honeyKg": 6.4]),
+        ]
+    }
+
+    // MARK: - Agriculture fields
+
+    private static func agricultureFields() -> [PropertyEntity] {
+        [
+            PropertyEntity(name: "Wheat Field A", kind: .cropZone,
+                location: offset(-180, 80),
+                health: HealthState(score: 0.82),
+                metrics: ["soilMoisture": 0.52, "yieldForecast": 6.4, "fieldArea": 4.2],
+                detail: .agriculture(AgricultureProfile(
+                    cropType: "Winter Wheat", fieldAreaHa: 4.2, soilType: "Clay-loam",
+                    growthStage: .grain,
+                    npk: AgricultureProfile.NPKProfile(nitrogen: 140, phosphorus: 60, potassium: 80),
+                    soilMoisture: 0.52, plantingDate: .now.addingTimeInterval(-180 * 86_400),
+                    expectedHarvest: .now.addingTimeInterval(35 * 86_400),
+                    irrigationEfficiency: 0.76, yieldForecastTha: 6.4))),
+            PropertyEntity(name: "Sunflower Field B", kind: .cropZone,
+                location: offset(-200, 50),
+                health: HealthState(score: 0.69, diseaseRisk: 0.22),
+                metrics: ["soilMoisture": 0.34, "yieldForecast": 3.1, "fieldArea": 2.8],
+                detail: .agriculture(AgricultureProfile(
+                    cropType: "Sunflower", fieldAreaHa: 2.8, soilType: "Sandy-loam",
+                    growthStage: .flowering,
+                    npk: AgricultureProfile.NPKProfile(nitrogen: 90, phosphorus: 45, potassium: 110),
+                    soilMoisture: 0.34, plantingDate: .now.addingTimeInterval(-90 * 86_400),
+                    expectedHarvest: .now.addingTimeInterval(65 * 86_400),
+                    irrigationEfficiency: 0.61, yieldForecastTha: 3.1))),
+            PropertyEntity(name: "Pivot Irrigator 1", kind: .irrigationPivot,
+                location: offset(-190, 65),
+                health: HealthState(score: 0.94),
+                metrics: ["flowLpm": 320, "coverageHa": 7.0],
+                detail: .device(DeviceProfile(protocolType: .mqtt, isOnline: true, isOn: false, powerWatts: 550, firmware: "4.1.0"))),
         ]
     }
 
@@ -221,6 +256,11 @@ public enum PropertySeed {
                 .init(role: .action, title: "Open vents", config: "vent.gh"),
                 .init(role: .action, title: "Dim grow lights 30%", config: "light.gh")
             ], module: .greenhouse),
+            Automation(name: "Field Irrigation Trigger", nodes: [
+                .init(role: .trigger, title: "Soil moisture < 30%", config: "field.soilSensor"),
+                .init(role: .condition, title: "No rain forecast 48 h", config: "weather.rain"),
+                .init(role: .action, title: "Start pivot irrigator 2 h", config: "irrigator.pivot1")
+            ], module: .agriculture),
         ]
     }
 

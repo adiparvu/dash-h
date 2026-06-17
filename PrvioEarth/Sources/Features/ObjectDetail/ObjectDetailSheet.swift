@@ -116,6 +116,13 @@ public struct ObjectDetailSheet: View {
                 MetricTile(label: "CO₂", value: String(format: "%.0f", g.co2Ppm), unit: "ppm", icon: "wind", tint: g.co2Ppm > 1200 ? .healthStressed : .domainGreenhouse),
                 MetricTile(label: "Grow Lights", value: g.growLightsOn ? "On" : "Off", icon: "lightbulb.fill", tint: .domainEnergy),
             ]
+        case .agriculture(let a):
+            return [
+                MetricTile(label: "Crop", value: a.cropType, icon: "field.of.wheat", tint: .domainAgriculture),
+                MetricTile(label: "Area", value: String(format: "%.1f", a.fieldAreaHa), unit: "ha", icon: "rectangle.inset.filled", tint: .domainAgriculture),
+                MetricTile(label: "Stage", value: a.growthStage.rawValue.capitalized, icon: a.growthStage.icon, tint: .domainAgriculture),
+                MetricTile(label: "Yield Forecast", value: String(format: "%.1f", a.yieldForecastTha), unit: "t/ha", icon: "chart.line.uptrend.xyaxis", tint: .healthThriving),
+            ]
         case .none:
             return entity.metrics.sorted(by: { $0.key < $1.key }).prefix(4).map {
                 MetricTile(label: $0.key, value: String(format: "%.1f", $0.value), icon: "gauge.medium", tint: tint)

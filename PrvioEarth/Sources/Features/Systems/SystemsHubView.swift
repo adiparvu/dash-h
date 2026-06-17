@@ -17,6 +17,7 @@ public struct SystemsHubView: View {
     var onOpenCamera: () -> Void
     var onOpenDrone: () -> Void
     var onOpenEditor: () -> Void
+    var onOpenSettings: () -> Void
     var onFocusModule: (PropertyModule) -> Void
 
     public init(twin: DigitalTwinEngine,
@@ -24,12 +25,14 @@ public struct SystemsHubView: View {
                 onOpenCamera: @escaping () -> Void = {},
                 onOpenDrone: @escaping () -> Void = {},
                 onOpenEditor: @escaping () -> Void = {},
+                onOpenSettings: @escaping () -> Void = {},
                 onFocusModule: @escaping (PropertyModule) -> Void) {
         self.twin = twin
         self.onOpenAutomation = onOpenAutomation
         self.onOpenCamera = onOpenCamera
         self.onOpenDrone = onOpenDrone
         self.onOpenEditor = onOpenEditor
+        self.onOpenSettings = onOpenSettings
         self.onFocusModule = onFocusModule
     }
 
@@ -61,6 +64,9 @@ public struct SystemsHubView: View {
                 toolRow(icon: "pencil.and.outline", title: "Build your Twin",
                         subtitle: "Place trees, ponds, devices on the map",
                         tint: .domainGarden, action: onOpenEditor)
+                toolRow(icon: "gearshape.fill", title: "Settings",
+                        subtitle: "Units, telemetry interval, notifications",
+                        tint: .prvioHorizon, action: onOpenSettings)
 
                 Text("Modules").font(.prvioHeadline())
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: Spacing.md) {
@@ -107,6 +113,7 @@ public struct SystemsHubView: View {
          (.pond, "Pond", "drop.fill", .domainPond),
          (.garden, "Garden", "camera.macro", .domainGarden),
          (.greenhouse, "Glass House", "leaf.fill", .domainGreenhouse),
+         (.agriculture, "Fields", "field.of.wheat", .domainAgriculture),
          (.home, "Home", "house.fill", .domainHome)]
     }
 }

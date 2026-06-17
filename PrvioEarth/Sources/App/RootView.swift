@@ -24,6 +24,7 @@ public struct RootView: View {
     @State private var showCamera = false
     @State private var showDrone = false
     @State private var showEditor = false
+    @State private var showSettings = false
 
     public init() {
         let saved = PersistenceStore.shared.loadEntities()
@@ -57,6 +58,12 @@ public struct RootView: View {
             FloatingNavBar(selection: $module, collapsed: mapVM.isExploring)
                 .padding(.bottom, Spacing.sm)
         }
+        .sheet(isPresented: $showSettings) {
+            SettingsView { showSettings = false }
+                .presentationDetents([.large])
+                .presentationBackground(.clear)
+                .presentationDragIndicator(.visible)
+        }
         .sheet(isPresented: $showSystems) {
             SystemsHubView(twin: twin, onOpenAutomation: {
                 showSystems = false
@@ -70,6 +77,9 @@ public struct RootView: View {
             }, onOpenEditor: {
                 showSystems = false
                 showEditor = true
+            }, onOpenSettings: {
+                showSystems = false
+                showSettings = true
             }, onFocusModule: { m in
                 showSystems = false
                 withAnimation(.prvioMorph) { module = m }
@@ -108,6 +118,7 @@ public struct RootView: View {
                 mapVM.applyHighlight(ids)
                 withAnimation(.prvioMorph) { module = .map }
             }
+            Task { await NotificationEngine.shared.requestAuthorization() }
         }
         .onDisappear { twin.stopLiveTelemetry() }
         .onChange(of: scenePhase) { _, phase in
@@ -128,7 +139,7 @@ public struct RootView: View {
                 .padding(.top, 80)
                 .padding(.bottom, 96)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
-        case .forest, .orchard, .pond, .home, .garden, .greenhouse:
+        case .forest, .orchard, .pond, .home, .garden, .greenhouse, .agriculture:
             ModuleDashboardView(module: module, twin: twin) { entity in
                 withAnimation(.prvioMorph) { module = .map }
                 mapVM.select(entity)

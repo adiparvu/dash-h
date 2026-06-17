@@ -31,7 +31,8 @@ public extension ShapeStyle where Self == Color {
     static var domainHome: Color       { Color(red: 0.52, green: 0.46, blue: 0.86) }
     static var domainEnergy: Color     { Color(red: 0.96, green: 0.78, blue: 0.20) }
     static var domainWater: Color      { Color(red: 0.30, green: 0.66, blue: 0.92) }
-    static var domainSecurity: Color   { Color(red: 0.90, green: 0.34, blue: 0.40) }
+    static var domainSecurity: Color    { Color(red: 0.90, green: 0.34, blue: 0.40) }
+    static var domainAgriculture: Color { Color(red: 0.78, green: 0.62, blue: 0.20) }
 
     // Health / status spectrum
     static var healthThriving: Color { Color(red: 0.24, green: 0.80, blue: 0.44) }

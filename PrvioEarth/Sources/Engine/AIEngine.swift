@@ -74,6 +74,36 @@ public struct AIEngine: Sendable {
                     title: "\(e.name) is offline",
                     detail: "Lost connection over \(d.protocolType.rawValue).",
                     severity: .advisory, module: .home, relatedEntityIDs: [e.id]))
+            case .garden(let g) where g.soilMoisture < 0.35:
+                out.append(PrvioInsight(
+                    title: "Low moisture in \(e.name)",
+                    detail: "Soil moisture at \(Int(g.soilMoisture * 100))% — below the 35% threshold.",
+                    severity: .warning, module: .garden, relatedEntityIDs: [e.id],
+                    recommendation: "Run drip irrigation for 15 minutes."))
+            case .greenhouse(let g) where g.temperatureC > 35:
+                out.append(PrvioInsight(
+                    title: "Heat stress in \(e.name)",
+                    detail: "Temperature at \(String(format: "%.1f", g.temperatureC))°C — above safe limit.",
+                    severity: .critical, module: .greenhouse, relatedEntityIDs: [e.id],
+                    recommendation: "Open vents and reduce grow-light intensity."))
+            case .greenhouse(let g) where g.co2Ppm > 1500:
+                out.append(PrvioInsight(
+                    title: "CO₂ spike in \(e.name)",
+                    detail: "CO₂ at \(Int(g.co2Ppm)) ppm — ventilation needed.",
+                    severity: .warning, module: .greenhouse, relatedEntityIDs: [e.id],
+                    recommendation: "Increase ventilation for 30 minutes."))
+            case .agriculture(let a) where a.soilMoisture < 0.30:
+                out.append(PrvioInsight(
+                    title: "\(e.name) drought stress",
+                    detail: "Soil moisture at \(Int(a.soilMoisture * 100))% — \(a.cropType) needs water.",
+                    severity: .warning, module: .agriculture, relatedEntityIDs: [e.id],
+                    recommendation: "Activate pivot irrigator for \(a.cropType) fields."))
+            case .agriculture(let a) where a.npk.nitrogen < 60:
+                out.append(PrvioInsight(
+                    title: "N-deficiency in \(e.name)",
+                    detail: "Nitrogen at \(Int(a.npk.nitrogen)) kg/ha — below optimal for \(a.growthStage.rawValue) stage.",
+                    severity: .advisory, module: .agriculture, relatedEntityIDs: [e.id],
+                    recommendation: "Schedule top-dressing application within 5 days."))
             default: break
             }
         }

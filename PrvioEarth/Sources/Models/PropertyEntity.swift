@@ -38,6 +38,7 @@ public enum EntityKind: String, Codable, CaseIterable, Sendable {
     case camera, sensor, pump, filter, aerator, irrigationValve
     case solarPanel, weatherStation, gate, equipment, pathway, fence
     case crop, soilSensor, growLight, beehive
+    case cropZone, irrigationPivot
 
     public var module: PropertyModule {
         switch self {
@@ -47,6 +48,7 @@ public enum EntityKind: String, Codable, CaseIterable, Sendable {
         case .house, .building, .camera, .gate, .solarPanel, .irrigationValve: return .home
         case .garden, .soilSensor: return .garden
         case .greenhouse, .growLight, .crop: return .greenhouse
+        case .cropZone, .irrigationPivot: return .agriculture
         default: return .map
         }
     }
@@ -76,6 +78,8 @@ public enum EntityKind: String, Codable, CaseIterable, Sendable {
         case .soilSensor: return "antenna.radiowaves.left.and.right"
         case .growLight: return "lightbulb.fill"
         case .beehive: return "circle.hexagongrid.fill"
+        case .cropZone: return "field.of.wheat"
+        case .irrigationPivot: return "arrow.clockwise.circle.fill"
         }
     }
 }
@@ -149,4 +153,5 @@ public enum EntityDetail: Codable, Hashable, Sendable {
     case device(DeviceProfile)
     case garden(GardenProfile)
     case greenhouse(GreenhouseProfile)
+    case agriculture(AgricultureProfile)
 }

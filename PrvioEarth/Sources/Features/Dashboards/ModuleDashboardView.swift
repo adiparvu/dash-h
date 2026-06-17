@@ -26,7 +26,7 @@ public struct ModuleDashboardView: View {
     @State private var showModuleDetail = false
 
     private var hasModuleDetail: Bool {
-        [.forest, .orchard, .pond, .garden, .greenhouse].contains(module)
+        [.forest, .orchard, .pond, .garden, .greenhouse, .agriculture, .home].contains(module)
     }
 
     private var moduleDetailLabel: String {
@@ -36,6 +36,8 @@ public struct ModuleDashboardView: View {
         case .pond: return "Water chemistry & life"
         case .garden: return "Soil, beds & companions"
         case .greenhouse: return "Climate & crop control"
+        case .agriculture: return "Field analytics & yield forecast"
+        case .home: return "Devices, energy & security"
         default: return "Analytics"
         }
     }
@@ -60,6 +62,8 @@ public struct ModuleDashboardView: View {
                 case .pond: PondDetailView(twin: twin)
                 case .garden: GardenView(twin: twin)
                 case .greenhouse: GreenhouseView(twin: twin)
+                case .agriculture: AgricultureView(twin: twin)
+                case .home: HomeView(twin: twin)
                 default: EmptyView()
                 }
             }

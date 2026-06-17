@@ -10,7 +10,7 @@
 import SwiftUI
 
 public enum PropertyModule: String, CaseIterable, Identifiable, Sendable {
-    case map, forest, orchard, pond, garden, greenhouse, home, intelligence
+    case map, forest, orchard, pond, garden, greenhouse, home, agriculture, intelligence
 
     public var id: String { rawValue }
 
@@ -23,6 +23,7 @@ public enum PropertyModule: String, CaseIterable, Identifiable, Sendable {
         case .garden: return "Garden"
         case .greenhouse: return "Glass House"
         case .home: return "Home"
+        case .agriculture: return "Fields"
         case .intelligence: return "PRVIO"
         }
     }
@@ -36,6 +37,7 @@ public enum PropertyModule: String, CaseIterable, Identifiable, Sendable {
         case .garden: return "camera.macro"
         case .greenhouse: return "leaf.fill"
         case .home: return "house.fill"
+        case .agriculture: return "field.of.wheat"
         case .intelligence: return "sparkles"
         }
     }
@@ -49,6 +51,7 @@ public enum PropertyModule: String, CaseIterable, Identifiable, Sendable {
         case .garden: return .domainGarden
         case .greenhouse: return .domainGreenhouse
         case .home: return .domainHome
+        case .agriculture: return .domainAgriculture
         case .intelligence: return .prvioMist
         }
     }
