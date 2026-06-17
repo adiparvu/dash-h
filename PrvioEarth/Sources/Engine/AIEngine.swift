@@ -114,6 +114,95 @@ public struct AIEngine: Sendable {
         return out.sorted { $0.severity > $1.severity }
     }
 
+    // MARK: - Weather-contextual insights
+
+    /// Translate live weather conditions and the short-range forecast into
+    /// actionable twin insights. Called alongside `deriveInsights` so weather
+    /// hazards surface alongside entity-level anomalies in the same feed.
+    public func deriveWeatherInsights(
+        current: WeatherEngine.Current?,
+        forecast: [WeatherEngine.DayForecast],
+        entities: [PropertyEntity]
+    ) -> [PrvioInsight] {
+        var out: [PrvioInsight] = []
+
+        // Frost risk — tomorrow's low threatens frost-sensitive modules
+        if let low = forecast.first?.lowC, low < 2 {
+            let targets = entities.filter { [.orchard, .garden, .greenhouse].contains($0.kind.module) }
+            if !targets.isEmpty {
+                out.append(PrvioInsight(
+                    title: "Frost risk overnight — \(String(format: "%.1f", low))°C low",
+                    detail: "Tomorrow's low of \(String(format: "%.1f", low))°C may damage frost-sensitive crops.",
+                    severity: low < 0 ? .critical : .warning,
+                    module: .garden,
+                    relatedEntityIDs: targets.map(\.id),
+                    recommendation: "Cover exposed plants and pre-heat the greenhouse before nightfall."))
+            }
+        }
+
+        // Heat wave — extreme high temp stresses outdoor modules
+        if let high = forecast.first?.highC, high > 34 {
+            let targets = entities.filter { [.agriculture, .orchard, .garden].contains($0.kind.module) }
+            out.append(PrvioInsight(
+                title: "Heat wave: \(String(format: "%.0f", high))°C forecast",
+                detail: "Extreme heat may stress outdoor crops and reduce yield quality.",
+                severity: .warning,
+                module: .agriculture,
+                relatedEntityIDs: targets.map(\.id),
+                recommendation: "Irrigate early morning and apply mulch to retain soil moisture."))
+        }
+
+        // Drought outlook — 2 of next 3 days below 10 % precip probability
+        let droughtDays = forecast.prefix(3).filter { $0.precipProbability < 0.10 }.count
+        if droughtDays >= 2 {
+            let soilEntities = entities.filter { e in
+                switch e.detail {
+                case .agriculture, .orchard, .garden: return true
+                default: return false
+                }
+            }
+            if !soilEntities.isEmpty {
+                out.append(PrvioInsight(
+                    title: "Dry spell ahead — plan irrigation",
+                    detail: "Less than 10% rain probability over the next 3 days.",
+                    severity: .advisory,
+                    module: .agriculture,
+                    relatedEntityIDs: soilEntities.map(\.id),
+                    recommendation: "Increase irrigation frequency and check soil moisture sensors daily."))
+            }
+        }
+
+        // High wind — structural hazard for orchard and greenhouse
+        if let windKph = current?.windKph, windKph > 50 {
+            let targets = entities.filter { [.orchard, .greenhouse].contains($0.kind.module) }
+            if !targets.isEmpty {
+                out.append(PrvioInsight(
+                    title: "High wind: \(Int(windKph)) km/h",
+                    detail: "Strong winds may damage orchard canopies and greenhouse structures.",
+                    severity: .warning,
+                    module: .orchard,
+                    relatedEntityIDs: targets.map(\.id),
+                    recommendation: "Secure support netting and close greenhouse vents."))
+            }
+        }
+
+        // Heavy rain — surface runoff risk to pond chemistry
+        if let tomorrow = forecast.first, tomorrow.precipProbability > 0.85 {
+            let ponds = entities.filter { if case .pond = $0.detail { return true }; return false }
+            if !ponds.isEmpty {
+                out.append(PrvioInsight(
+                    title: "Heavy rain may affect pond chemistry",
+                    detail: "High precipitation probability (\(Int(tomorrow.precipProbability * 100))%) — runoff could shift pH and oxygen levels.",
+                    severity: .advisory,
+                    module: .pond,
+                    relatedEntityIDs: ponds.map(\.id),
+                    recommendation: "Monitor pond parameters after rainfall and adjust aeration if needed."))
+            }
+        }
+
+        return out
+    }
+
     // MARK: - Predictive Analytics
 
     /// Produce a forward forecast for a metric history using simple

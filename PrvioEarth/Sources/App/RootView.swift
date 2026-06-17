@@ -185,6 +185,9 @@ public struct RootView: View {
             }
             if phase == .background { PersistenceStore.shared.save(entities: twin.entities) }
         }
+        .onChange(of: weatherEngine.current) { _, current in
+            twin.applyWeather(current, forecast: weatherEngine.forecast)
+        }
         .userActivity("com.prvio.earth.module") { activity in
             activity.title = module == .map ? "Digital Twin" : module.title
             activity.userInfo = ["module": module.rawValue]

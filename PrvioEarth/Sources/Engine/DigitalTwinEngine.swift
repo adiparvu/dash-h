@@ -36,6 +36,8 @@ public final class DigitalTwinEngine {
     private var tickTask: Task<Void, Never>?
     private var tickCount = 0
     private var lastCriticalTitles: Set<String> = []
+    private var weatherCurrent: WeatherEngine.Current? = nil
+    private var weatherForecast: [WeatherEngine.DayForecast] = []
 
     public init(anchor: GeoPoint, seed: [PropertyEntity], automations: [Automation], ai: AIEngine = AIEngine()) {
         self.anchor = anchor
@@ -119,6 +121,17 @@ public final class DigitalTwinEngine {
         }
     }
 
+    // MARK: - Weather Context
+
+    /// Feed current weather conditions into the twin so AI insights reflect
+    /// real-world hazards (frost, heat waves, drought, high wind, heavy rain).
+    /// Called from RootView whenever WeatherEngine refreshes.
+    public func applyWeather(_ current: WeatherEngine.Current?, forecast: [WeatherEngine.DayForecast]) {
+        weatherCurrent = current
+        weatherForecast = forecast
+        recomputeInsights()
+    }
+
     // MARK: - Live Telemetry
 
     /// Begin streaming simulated sensor updates into the twin. In production
@@ -151,7 +164,10 @@ public final class DigitalTwinEngine {
     // MARK: - Intelligence
 
     private func recomputeInsights() {
-        insights = ai.deriveInsights(from: entities)
+        let entityInsights = ai.deriveInsights(from: entities)
+        let wxInsights = ai.deriveWeatherInsights(
+            current: weatherCurrent, forecast: weatherForecast, entities: entities)
+        insights = (entityInsights + wxInsights).sorted { $0.severity > $1.severity }
         let newCriticalTitles = Set(insights.filter { $0.severity == .critical }.map(\.title))
         let addedCriticals = newCriticalTitles.subtracting(lastCriticalTitles)
         if !addedCriticals.isEmpty {

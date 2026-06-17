@@ -14,6 +14,7 @@ import SwiftUI
 struct PrvioWidgetBundle: WidgetBundle {
     var body: some Widget {
         PropertyWidget()
+        ModuleWidget()
         IrrigationLiveActivity()
     }
 }
