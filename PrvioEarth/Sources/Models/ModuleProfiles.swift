@@ -99,6 +99,52 @@ public struct DeviceProfile: Codable, Hashable, Sendable {
     }
 }
 
+// MARK: - Smart Garden
+
+public struct GardenProfile: Codable, Hashable, Sendable {
+    public var beds: [String]
+    public var soilMoisture: Double        // 0...1
+    public var soilPH: Double
+    public var soilTemperatureC: Double
+    public var lastWatered: Date
+    public var nextWatering: Date
+    public var sunHoursPerDay: Double
+    public var mulched: Bool
+    public var companions: [String]
+
+    public init(beds: [String], soilMoisture: Double, soilPH: Double, soilTemperatureC: Double,
+                lastWatered: Date, nextWatering: Date, sunHoursPerDay: Double, mulched: Bool,
+                companions: [String]) {
+        self.beds = beds; self.soilMoisture = soilMoisture; self.soilPH = soilPH
+        self.soilTemperatureC = soilTemperatureC; self.lastWatered = lastWatered
+        self.nextWatering = nextWatering; self.sunHoursPerDay = sunHoursPerDay
+        self.mulched = mulched; self.companions = companions
+    }
+}
+
+// MARK: - Smart Greenhouse
+
+public struct GreenhouseProfile: Codable, Hashable, Sendable {
+    public var temperatureC: Double
+    public var humidity: Double            // 0...1
+    public var co2Ppm: Double
+    public var lightLux: Double
+    public var growLightsOn: Bool
+    public var ventilationOn: Bool
+    public var zones: Int
+    public var crops: [String]
+    public var nextHarvest: Date?
+
+    public init(temperatureC: Double, humidity: Double, co2Ppm: Double, lightLux: Double,
+                growLightsOn: Bool, ventilationOn: Bool, zones: Int, crops: [String],
+                nextHarvest: Date? = nil) {
+        self.temperatureC = temperatureC; self.humidity = humidity
+        self.co2Ppm = co2Ppm; self.lightLux = lightLux
+        self.growLightsOn = growLightsOn; self.ventilationOn = ventilationOn
+        self.zones = zones; self.crops = crops; self.nextHarvest = nextHarvest
+    }
+}
+
 // MARK: - Time Series (historical data)
 
 public struct TimeSeriesPoint: Codable, Hashable, Identifiable, Sendable {

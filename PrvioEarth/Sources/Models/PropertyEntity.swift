@@ -37,13 +37,16 @@ public enum EntityKind: String, Codable, CaseIterable, Sendable {
     case tree, fruitTree, pond, greenhouse, garden, building, house
     case camera, sensor, pump, filter, aerator, irrigationValve
     case solarPanel, weatherStation, gate, equipment, pathway, fence
+    case crop, soilSensor, growLight, beehive
 
     public var module: PropertyModule {
         switch self {
         case .tree: return .forest
-        case .fruitTree: return .orchard
+        case .fruitTree, .beehive: return .orchard
         case .pond, .pump, .filter, .aerator: return .pond
-        case .house, .building, .camera, .gate: return .home
+        case .house, .building, .camera, .gate, .solarPanel, .irrigationValve: return .home
+        case .garden, .soilSensor: return .garden
+        case .greenhouse, .growLight, .crop: return .greenhouse
         default: return .map
         }
     }
@@ -69,6 +72,10 @@ public enum EntityKind: String, Codable, CaseIterable, Sendable {
         case .equipment: return "wrench.and.screwdriver.fill"
         case .pathway: return "point.topleft.down.to.point.bottomright.curvepath.fill"
         case .fence: return "rectangle.split.3x1.fill"
+        case .crop: return "leaf.circle.fill"
+        case .soilSensor: return "antenna.radiowaves.left.and.right"
+        case .growLight: return "lightbulb.fill"
+        case .beehive: return "circle.hexagongrid.fill"
         }
     }
 }
@@ -140,4 +147,6 @@ public enum EntityDetail: Codable, Hashable, Sendable {
     case orchard(OrchardProfile)
     case pond(PondProfile)
     case device(DeviceProfile)
+    case garden(GardenProfile)
+    case greenhouse(GreenhouseProfile)
 }

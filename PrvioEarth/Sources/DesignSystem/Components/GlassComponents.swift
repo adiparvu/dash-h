@@ -111,6 +111,135 @@ public struct MetricTile: View {
     }
 }
 
+// MARK: - Analytics Scaffold (shared by all module detail views)
+
+public struct AnalyticsScaffold<Content: View>: View {
+    public var title: String
+    public var tint: Color
+    @ViewBuilder public var content: () -> Content
+
+    public init(title: String, tint: Color, @ViewBuilder content: @escaping () -> Content) {
+        self.title = title; self.tint = tint; self.content = content
+    }
+
+    public var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Spacing.lg) {
+                Text(title).font(.prvioTitle())
+                content()
+            }
+            .padding(Spacing.lg)
+            .padding(.top, 40)
+            .padding(.bottom, 60)
+        }
+        .background {
+            RoundedRectangle(cornerRadius: 40, style: .continuous)
+                .fill(.ultraThinMaterial).ignoresSafeArea()
+        }
+    }
+}
+
+public struct ChartCard<Content: View>: View {
+    public var title: String
+    public var tint: Color
+    @ViewBuilder public var content: () -> Content
+
+    public init(title: String, tint: Color, @ViewBuilder content: @escaping () -> Content) {
+        self.title = title; self.tint = tint; self.content = content
+    }
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            Text(title).font(.prvioHeadline())
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(Spacing.md)
+        .liquidGlass(.raised, tint: tint, interactive: false)
+    }
+}
+
+public struct AnalyticsStat: Identifiable {
+    public let id = UUID()
+    public var label: String
+    public var value: String
+    public var unit: String?
+    public var icon: String
+
+    public init(label: String, value: String, unit: String? = nil, icon: String) {
+        self.label = label; self.value = value; self.unit = unit; self.icon = icon
+    }
+}
+
+public struct StatRow: View {
+    public var stats: [AnalyticsStat]
+    public var tint: Color
+
+    public init(stats: [AnalyticsStat], tint: Color) {
+        self.stats = stats; self.tint = tint
+    }
+
+    public var body: some View {
+        HStack(spacing: Spacing.md) {
+            ForEach(stats) { stat in
+                VStack(alignment: .leading, spacing: 6) {
+                    Image(systemName: stat.icon).foregroundStyle(tint)
+                    HStack(alignment: .firstTextBaseline, spacing: 2) {
+                        Text(stat.value).font(.system(size: 24, weight: .semibold, design: .rounded))
+                        if let unit = stat.unit { Text(unit).font(.prvioCaption()).foregroundStyle(.secondary) }
+                    }
+                    Text(stat.label).font(.prvioCaption()).foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(Spacing.md)
+                .liquidGlass(.raised, tint: tint, interactive: false)
+            }
+        }
+    }
+}
+
+public struct RiskBadge: View {
+    public var label: String
+    public var count: Int
+    public var icon: String
+    public var tint: Color
+
+    public init(label: String, count: Int, icon: String, tint: Color) {
+        self.label = label; self.count = count; self.icon = icon; self.tint = tint
+    }
+
+    public var body: some View {
+        HStack(spacing: Spacing.sm) {
+            Image(systemName: icon).foregroundStyle(count > 0 ? tint : .secondary)
+            VStack(alignment: .leading) {
+                Text("\(count)").font(.prvioHeadline())
+                Text(label).font(.prvioCaption()).foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
+        .padding(Spacing.md)
+        .liquidGlass(.raised, tint: count > 0 ? tint : .prvioMist, interactive: false)
+    }
+}
+
+public struct InsightFootnote: View {
+    public var text: String
+    public var tint: Color
+
+    public init(text: String, tint: Color) {
+        self.text = text; self.tint = tint
+    }
+
+    public var body: some View {
+        HStack(alignment: .top, spacing: Spacing.sm) {
+            Image(systemName: "sparkles").foregroundStyle(tint)
+            Text(text).font(.prvioCaption()).foregroundStyle(.secondary)
+        }
+        .padding(Spacing.md)
+        .liquidGlass(.raised, tint: tint, interactive: false)
+    }
+}
+
 // MARK: - Health Ring
 
 /// Apple-Activity-style ring expressing a 0...1 health score.

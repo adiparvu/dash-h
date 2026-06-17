@@ -21,6 +21,8 @@ public enum PropertySeed {
         out.append(contentsOf: forest())
         out.append(pond())
         out.append(contentsOf: devices())
+        out.append(contentsOf: gardenBeds())
+        out.append(contentsOf: greenhouseZones())
         return out
     }
 
@@ -32,18 +34,70 @@ public enum PropertySeed {
                 location: offset(0, 0),
                 health: HealthState(score: 0.97),
                 metrics: ["energyKwh": 18.4, "temp": 21.5]),
-            PropertyEntity(name: "Greenhouse", kind: .greenhouse,
-                location: offset(40, -30),
-                health: HealthState(score: 0.88),
-                metrics: ["temp": 26.0, "humidity": 0.71, "soilMoisture": 0.62]),
-            PropertyEntity(name: "Garden Bed", kind: .garden,
-                location: offset(-30, -20),
-                health: HealthState(score: 0.82),
-                metrics: ["soilMoisture": 0.55, "temp": 22.0]),
             PropertyEntity(name: "Weather Station", kind: .weatherStation,
                 location: offset(60, 40),
                 health: HealthState(score: 1.0),
                 metrics: ["windKph": 12, "temp": 19.0, "rainMm": 0]),
+        ]
+    }
+
+    // MARK: - Garden beds
+
+    private static func gardenBeds() -> [PropertyEntity] {
+        [
+            PropertyEntity(name: "Herb Garden", kind: .garden,
+                location: offset(-30, -20),
+                health: HealthState(score: 0.84),
+                metrics: ["soilMoisture": 0.56, "soilPH": 6.8, "soilTemp": 21.0],
+                detail: .garden(GardenProfile(
+                    beds: ["Basil", "Rosemary", "Mint", "Thyme"],
+                    soilMoisture: 0.56, soilPH: 6.8, soilTemperatureC: 21.0,
+                    lastWatered: .now.addingTimeInterval(-86_400),
+                    nextWatering: .now.addingTimeInterval(43_200),
+                    sunHoursPerDay: 6.5, mulched: true,
+                    companions: ["Tomato", "Lavender"]))),
+            PropertyEntity(name: "Vegetable Bed A", kind: .garden,
+                location: offset(-38, -26),
+                health: HealthState(score: 0.71, diseaseRisk: 0.18),
+                metrics: ["soilMoisture": 0.38, "soilPH": 6.3, "soilTemp": 19.5],
+                detail: .garden(GardenProfile(
+                    beds: ["Tomato", "Cucumber", "Courgette"],
+                    soilMoisture: 0.38, soilPH: 6.3, soilTemperatureC: 19.5,
+                    lastWatered: .now.addingTimeInterval(-172_800),
+                    nextWatering: .now.addingTimeInterval(7_200),
+                    sunHoursPerDay: 8.0, mulched: false,
+                    companions: ["Basil", "Marigold"]))),
+            PropertyEntity(name: "Soil Sensor G1", kind: .soilSensor,
+                location: offset(-34, -23),
+                health: HealthState(score: 0.99),
+                metrics: ["moisture": 0.47, "pH": 6.55, "temp": 20.0],
+                detail: .device(DeviceProfile(protocolType: .thread, isOnline: true, isOn: true, firmware: "3.1.0"))),
+        ]
+    }
+
+    // MARK: - Greenhouse zones
+
+    private static func greenhouseZones() -> [PropertyEntity] {
+        [
+            PropertyEntity(name: "Glass House", kind: .greenhouse,
+                location: offset(40, -30),
+                health: HealthState(score: 0.91),
+                metrics: ["temp": 26.0, "humidity": 0.71, "co2Ppm": 850, "lightLux": 12_000],
+                detail: .greenhouse(GreenhouseProfile(
+                    temperatureC: 26.0, humidity: 0.71, co2Ppm: 850,
+                    lightLux: 12_000, growLightsOn: true, ventilationOn: false,
+                    zones: 3,
+                    crops: ["Tomato", "Basil", "Lettuce", "Chilli", "Pepper"],
+                    nextHarvest: .now.addingTimeInterval(7 * 86_400)))),
+            PropertyEntity(name: "Grow Light Array", kind: .growLight,
+                location: offset(41, -29),
+                health: HealthState(score: 0.97),
+                metrics: ["powerW": 240, "lightLux": 12_000],
+                detail: .device(DeviceProfile(protocolType: .matter, isOnline: true, isOn: true, powerWatts: 240, firmware: "2.2.0"))),
+            PropertyEntity(name: "Beehive Alpha", kind: .beehive,
+                location: offset(55, -45),
+                health: HealthState(score: 0.88),
+                metrics: ["colonyStrength": 0.88, "honeyKg": 6.4]),
         ]
     }
 
@@ -157,6 +211,16 @@ public enum PropertySeed {
                 .init(role: .condition, title: "No family home", config: "presence"),
                 .init(role: .action, title: "Record + floodlight + alert", config: "security")
             ], module: .home),
+            Automation(name: "Garden Watering Schedule", nodes: [
+                .init(role: .trigger, title: "Soil moisture < 40%", config: "garden.soilSensor"),
+                .init(role: .condition, title: "No rain forecast 24 h", config: "weather.rain"),
+                .init(role: .action, title: "Run drip for 15 min", config: "valve.garden")
+            ], module: .garden),
+            Automation(name: "Greenhouse Climate Control", nodes: [
+                .init(role: .trigger, title: "Temperature > 32°C", config: "greenhouse.temp"),
+                .init(role: .action, title: "Open vents", config: "vent.gh"),
+                .init(role: .action, title: "Dim grow lights 30%", config: "light.gh")
+            ], module: .greenhouse),
         ]
     }
 

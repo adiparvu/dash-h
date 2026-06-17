@@ -26,9 +26,10 @@ public struct RootView: View {
     @State private var showEditor = false
 
     public init() {
+        let saved = PersistenceStore.shared.loadEntities()
         let twin = DigitalTwinEngine(
             anchor: PropertySeed.anchor,
-            seed: PropertySeed.makeEntities(),
+            seed: saved ?? PropertySeed.makeEntities(),
             automations: PropertySeed.makeAutomations())
         let gis = GISEngine(anchor: PropertySeed.anchor)
         let mapVM = PropertyMapViewModel(twin: twin, gis: gis)
@@ -109,8 +110,13 @@ public struct RootView: View {
             }
         }
         .onDisappear { twin.stopLiveTelemetry() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background { PersistenceStore.shared.save(entities: twin.entities) }
+        }
         .preferredColorScheme(.dark)
     }
+
+    @Environment(\.scenePhase) private var scenePhase
 
     @ViewBuilder
     private var overlayContent: some View {
@@ -122,7 +128,7 @@ public struct RootView: View {
                 .padding(.top, 80)
                 .padding(.bottom, 96)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
-        case .forest, .orchard, .pond, .home:
+        case .forest, .orchard, .pond, .home, .garden, .greenhouse:
             ModuleDashboardView(module: module, twin: twin) { entity in
                 withAnimation(.prvioMorph) { module = .map }
                 mapVM.select(entity)

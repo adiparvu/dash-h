@@ -102,6 +102,20 @@ public struct ObjectDetailSheet: View {
                 MetricTile(label: "Power", value: d.powerWatts.map { String(format: "%.0f", $0) } ?? "—", unit: "W", icon: "bolt.fill", tint: .domainEnergy),
                 MetricTile(label: "Firmware", value: d.firmware, icon: "cpu", tint: .domainHome),
             ]
+        case .garden(let g):
+            return [
+                MetricTile(label: "Soil Moisture", value: String(format: "%.0f", g.soilMoisture * 100), unit: "%", icon: "humidity", tint: .domainGarden, trend: g.soilMoisture < 0.4 ? .down : .flat),
+                MetricTile(label: "Soil pH", value: String(format: "%.1f", g.soilPH), icon: "drop.fill", tint: .domainGarden),
+                MetricTile(label: "Soil Temp", value: String(format: "%.0f", g.soilTemperatureC), unit: "°C", icon: "thermometer.medium", tint: .domainGarden),
+                MetricTile(label: "Sun Hours", value: String(format: "%.1f", g.sunHoursPerDay), unit: "h", icon: "sun.max.fill", tint: .domainOrchard),
+            ]
+        case .greenhouse(let g):
+            return [
+                MetricTile(label: "Temperature", value: String(format: "%.1f", g.temperatureC), unit: "°C", icon: "thermometer.medium", tint: .domainGreenhouse),
+                MetricTile(label: "Humidity", value: String(format: "%.0f", g.humidity * 100), unit: "%", icon: "humidity", tint: .domainWater),
+                MetricTile(label: "CO₂", value: String(format: "%.0f", g.co2Ppm), unit: "ppm", icon: "wind", tint: g.co2Ppm > 1200 ? .healthStressed : .domainGreenhouse),
+                MetricTile(label: "Grow Lights", value: g.growLightsOn ? "On" : "Off", icon: "lightbulb.fill", tint: .domainEnergy),
+            ]
         case .none:
             return entity.metrics.sorted(by: { $0.key < $1.key }).prefix(4).map {
                 MetricTile(label: $0.key, value: String(format: "%.1f", $0.value), icon: "gauge.medium", tint: tint)

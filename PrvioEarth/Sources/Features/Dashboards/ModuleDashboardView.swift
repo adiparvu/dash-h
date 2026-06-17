@@ -2,11 +2,11 @@
 //  ModuleDashboardView.swift
 //  PRVIO EARTH
 //
-//  A spatial, object-centric module overview (Forest, Orchard, Pond,
-//  Home). NOT an enterprise dashboard: it's a Liquid Glass summary that
-//  floats over a filtered twin, leading with an aggregate health ring and
-//  letting the user dive straight back to entities on the map. Reused for
-//  every module by swapping the module parameter.
+//  A spatial, object-centric module overview. NOT an enterprise dashboard:
+//  it's a Liquid Glass summary that floats over a filtered twin, leading
+//  with an aggregate health ring and letting the user dive straight back
+//  to entities on the map. Reused for every module — swaps to a
+//  module-specific detail sheet for Pond, Garden and Greenhouse.
 //
 
 import SwiftUI
@@ -23,26 +23,45 @@ public struct ModuleDashboardView: View {
     private var entities: [PropertyEntity] { twin.entities(in: module) }
     private var insights: [PrvioInsight] { twin.insights(for: module) }
 
-    @State private var showAnalytics = false
+    @State private var showModuleDetail = false
 
-    private var hasAnalytics: Bool { module == .forest || module == .orchard }
+    private var hasModuleDetail: Bool {
+        [.forest, .orchard, .pond, .garden, .greenhouse].contains(module)
+    }
+
+    private var moduleDetailLabel: String {
+        switch module {
+        case .forest: return "Carbon & growth analytics"
+        case .orchard: return "Yield & harvest analytics"
+        case .pond: return "Water chemistry & life"
+        case .garden: return "Soil, beds & companions"
+        case .greenhouse: return "Climate & crop control"
+        default: return "Analytics"
+        }
+    }
 
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.lg) {
                 summaryCard
-                if hasAnalytics { analyticsButton }
+                if hasModuleDetail { moduleDetailButton }
                 if !insights.isEmpty { insightStrip }
                 entityFlow
             }
             .padding(Spacing.md)
-            .padding(.top, 80) // clear floating top bar
-            .padding(.bottom, 120) // clear nav bar
+            .padding(.top, 80)
+            .padding(.bottom, 120)
         }
-        .sheet(isPresented: $showAnalytics) {
+        .sheet(isPresented: $showModuleDetail) {
             Group {
-                if module == .forest { ForestAnalyticsView(twin: twin) }
-                else { OrchardAnalyticsView(twin: twin) }
+                switch module {
+                case .forest: ForestAnalyticsView(twin: twin)
+                case .orchard: OrchardAnalyticsView(twin: twin)
+                case .pond: PondDetailView(twin: twin)
+                case .garden: GardenView(twin: twin)
+                case .greenhouse: GreenhouseView(twin: twin)
+                default: EmptyView()
+                }
             }
             .presentationDetents([.large])
             .presentationBackground(.clear)
@@ -50,12 +69,11 @@ public struct ModuleDashboardView: View {
         }
     }
 
-    private var analyticsButton: some View {
-        Button { showAnalytics = true } label: {
+    private var moduleDetailButton: some View {
+        Button { showModuleDetail = true } label: {
             HStack {
                 Image(systemName: "chart.bar.xaxis").foregroundStyle(module.tint)
-                Text(module == .forest ? "Carbon & growth analytics" : "Yield & harvest analytics")
-                    .font(.prvioLabel())
+                Text(moduleDetailLabel).font(.prvioLabel())
                 Spacer()
                 Image(systemName: "chevron.right").foregroundStyle(.secondary)
             }

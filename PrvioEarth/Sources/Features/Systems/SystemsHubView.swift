@@ -105,9 +105,9 @@ public struct SystemsHubView: View {
         [(.forest, "Forest", "tree.fill", .domainForest),
          (.orchard, "Orchard", "apple.logo", .domainOrchard),
          (.pond, "Pond", "drop.fill", .domainPond),
-         (.home, "Home", "house.fill", .domainHome),
-         (.map, "Garden", "leaf.fill", .domainGarden),
-         (.intelligence, "PRVIO", "sparkles", .prvioMist)]
+         (.garden, "Garden", "camera.macro", .domainGarden),
+         (.greenhouse, "Glass House", "leaf.fill", .domainGreenhouse),
+         (.home, "Home", "house.fill", .domainHome)]
     }
 }
 
