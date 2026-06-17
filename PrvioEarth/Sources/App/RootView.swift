@@ -102,7 +102,7 @@ public struct RootView: View {
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showDrone) {
-            DroneModeView(vm: DroneModeViewModel(vision: vision, gis: gis))
+            DroneModeView(vm: DroneModeViewModel(vision: vision, gis: gis, twin: twin))
                 .presentationDetents([.large])
                 .presentationBackground(.clear)
                 .presentationDragIndicator(.visible)

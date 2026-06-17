@@ -83,7 +83,10 @@ public struct ModuleDashboardView: View {
             }
             .padding(Spacing.md)
             .liquidGlass(.raised, tint: module.tint, interactive: false)
-        }.buttonStyle(.plain)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(moduleDetailLabel)
+        .accessibilityHint("Opens detailed analytics for \(module.title)")
     }
 
     // MARK: - Summary
@@ -166,6 +169,12 @@ public struct ModuleDashboardView: View {
                 .accessibilityLabel(entity.name)
                 .accessibilityValue(entity.primaryMetric.map { "\($0.value) \($0.label)" }
                     ?? "\(Int(entity.health.score * 100)) percent health")
+                .accessibilityHint("Navigates to \(entity.name) on the map")
+            }
+        }
+        .accessibilityRotor("Entities") {
+            ForEach(entities) { entity in
+                AccessibilityRotorEntry(entity.name)
             }
         }
     }

@@ -26,6 +26,17 @@ public final class CameraAIViewModel {
 
     public let cameras: [PropertyEntity]
 
+    public struct AlertEntry: Identifiable, Sendable {
+        public let id = UUID()
+        public var cameraName: String
+        public var classification: DetectionClass
+        public var confidence: Double
+        public var note: String?
+        public var capturedAt: Date
+    }
+
+    public private(set) var alertHistory: [AlertEntry] = []
+
     public func start() {
         vision.startCameraFeed(cameraIDs: cameras.map(\.id))
     }
@@ -36,6 +47,17 @@ public final class CameraAIViewModel {
     }
     public var currentFrame: CameraFrame? {
         selectedCameraID.flatMap { vision.frame(for: $0) }
+    }
+
+    public func recordAlerts(frame: CameraFrame, cameraName: String) {
+        let alerts = frame.detections.filter { $0.classification.isAlerting }
+        guard !alerts.isEmpty else { return }
+        let entries = alerts.map { det in
+            AlertEntry(cameraName: cameraName, classification: det.classification,
+                       confidence: det.confidence, note: det.note, capturedAt: frame.capturedAt)
+        }
+        alertHistory.insert(contentsOf: entries, at: 0)
+        if alertHistory.count > 20 { alertHistory = Array(alertHistory.prefix(20)) }
     }
 }
 
@@ -57,6 +79,7 @@ public struct CameraAIView: View {
                         .padding(Spacing.md)
                 }
                 cameraStrip
+                if !vm.alertHistory.isEmpty { alertHistoryFeed }
             }
             .padding(Spacing.lg)
             .padding(.top, 40)
@@ -67,6 +90,10 @@ public struct CameraAIView: View {
         }
         .onAppear { vm.start() }
         .onDisappear { vm.stop() }
+        .onChange(of: vm.currentFrame?.id) { _, _ in
+            guard let frame = vm.currentFrame else { return }
+            vm.recordAlerts(frame: frame, cameraName: vm.selectedCamera?.name ?? "Camera")
+        }
     }
 
     // MARK: - Feed + overlays
@@ -156,6 +183,32 @@ public struct CameraAIView: View {
                         }
                     }.buttonStyle(.plain)
                 }
+            }
+        }
+    }
+
+    private var alertHistoryFeed: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Label("Alert History", systemImage: "exclamationmark.shield.fill")
+                .font(.prvioHeadline()).foregroundStyle(.domainSecurity)
+            ForEach(vm.alertHistory.prefix(8)) { entry in
+                HStack(spacing: Spacing.md) {
+                    Image(systemName: entry.classification.symbol)
+                        .foregroundStyle(.domainSecurity).frame(width: 24)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(entry.classification.label).font(.prvioLabel())
+                        Text(entry.cameraName).font(.prvioCaption()).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("\(Int(entry.confidence * 100))%").font(.prvioLabel())
+                        Text(entry.capturedAt.formatted(.relative(presentation: .named)))
+                            .font(.prvioCaption()).foregroundStyle(.secondary)
+                    }
+                }
+                .padding(Spacing.md)
+                .liquidGlass(.raised, tint: .domainSecurity, interactive: false)
+                .accessibilityLabel("\(entry.classification.label) on \(entry.cameraName), \(Int(entry.confidence * 100)) percent confidence")
             }
         }
     }

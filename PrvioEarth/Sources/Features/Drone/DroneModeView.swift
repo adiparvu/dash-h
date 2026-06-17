@@ -16,13 +16,25 @@ import SwiftUI
 public final class DroneModeViewModel {
     public let vision: VisionEngine
     public let gis: GISEngine
+    public let twin: DigitalTwinEngine
 
-    public init(vision: VisionEngine, gis: GISEngine) {
+    public init(vision: VisionEngine, gis: GISEngine, twin: DigitalTwinEngine) {
         self.vision = vision
         self.gis = gis
+        self.twin = twin
     }
 
     public var missions: [DroneMission] { vision.missions }
+
+    /// Forest and orchard entities correlated to the active vegetation overlay.
+    public var vegetationEntities: [PropertyEntity] {
+        guard gis.overlay == .ndvi || gis.overlay == .canopyHeight else { return [] }
+        return twin.entities
+            .filter { $0.kind.module == .forest || $0.kind.module == .orchard }
+            .sorted { $0.health.score > $1.health.score }
+    }
+
+    public var overlayLabel: String { gis.overlay.label }
 
     public func planFlight() {
         let mission = DroneMission(
@@ -54,6 +66,7 @@ public struct DroneModeView: View {
             VStack(alignment: .leading, spacing: Spacing.lg) {
                 header
                 productGrid
+                if !vm.vegetationEntities.isEmpty { healthCorrelationPanel }
                 Text("Missions").font(.prvioHeadline())
                 if vm.missions.isEmpty {
                     Label("No flights yet — plan a survey above.", systemImage: "paperplane")
@@ -100,6 +113,29 @@ public struct DroneModeView: View {
                         .liquidGlass(.raised, tint: .domainForest, interactive: false)
                     }.buttonStyle(.plain)
                 }
+            }
+        }
+    }
+
+    private var healthCorrelationPanel: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Label("\(vm.overlayLabel) — Health Correlation", systemImage: "chart.bar.xaxis.ascending")
+                .font(.prvioHeadline())
+            ForEach(vm.vegetationEntities.prefix(6)) { entity in
+                HStack(spacing: Spacing.md) {
+                    Image(systemName: entity.kind.symbol)
+                        .foregroundStyle(entity.health.score.healthColor).frame(width: 24)
+                    Text(entity.name).font(.prvioLabel()).lineLimit(1)
+                    Spacer()
+                    ProgressView(value: entity.health.score)
+                        .tint(entity.health.score.healthColor)
+                        .frame(width: 72)
+                    Text("\(Int(entity.health.score * 100))%")
+                        .font(.prvioCaption()).foregroundStyle(.secondary)
+                        .frame(width: 34, alignment: .trailing)
+                }
+                .padding(Spacing.md)
+                .liquidGlass(.raised, tint: .domainForest, interactive: false)
             }
         }
     }
