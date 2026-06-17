@@ -289,11 +289,12 @@ struct ModulePickerIntent: AppIntent, WidgetConfigurationIntent {
     static var title: LocalizedStringResource = "Choose Module"
     static var description = IntentDescription("Select which property module to display.")
 
+    // WidgetConfigurationIntent requires all @Parameter types to be optional.
     @Parameter(title: "Module")
-    var module: ModuleChoice
+    var module: ModuleChoice?
 
     init() {}
-    init(module: ModuleChoice) { self.module = module }
+    init(module: ModuleChoice?) { self.module = module }
 
     func perform() async throws -> some IntentResult { .result() }
 }
@@ -315,14 +316,14 @@ struct ModuleProvider: AppIntentTimelineProvider {
         ModuleEntry(
             date: .now,
             snapshot: TwinSnapshotBridge.load() ?? .placeholder,
-            module: configuration.module)
+            module: configuration.module ?? .forest)
     }
 
     func timeline(for configuration: ModulePickerIntent, in context: Context) async -> Timeline<ModuleEntry> {
         let entry = ModuleEntry(
             date: .now,
             snapshot: TwinSnapshotBridge.load() ?? .placeholder,
-            module: configuration.module)
+            module: configuration.module ?? .forest)
         return Timeline(entries: [entry], policy: .after(.now.addingTimeInterval(900)))
     }
 }
