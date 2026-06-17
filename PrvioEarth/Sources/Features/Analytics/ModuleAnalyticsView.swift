@@ -139,13 +139,16 @@ public struct PondAnalyticsView: View {
         PropertyAnalytics.pond(twin.entities)
     }
     private var oxygenPoints: [TimeSeriesPoint] {
-        let seed = Double(abs(twin.entities.first { $0.kind == .pond }?.id.hashValue ?? 12_345) % 10_000) / 10_000.0
+        let hashVal = twin.entities.first { $0.kind == .pond }?.id.hashValue ?? 12_345
+        let seed = Double(abs(hashVal) % 10_000) / 10_000.0
         let avg = summary.averageOxygenMgL
-        return (0..<14).map { day in
-            let wave = sin(Double(day) / 13.0 * .pi * 3.2 + seed * .pi * 2) * 1.1
+        return (0..<14).map { day -> TimeSeriesPoint in
+            let t = Double(day) / 13.0
+            let wave = sin(t * .pi * 3.2 + seed * .pi * 2) * 1.1
+            let clamped = min(11.0, max(3.0, avg + wave))
             return TimeSeriesPoint(
                 timestamp: .now.addingTimeInterval(Double(day - 14) * 86_400),
-                value: min(11, max(3, avg + wave)))
+                value: clamped)
         }
     }
 
