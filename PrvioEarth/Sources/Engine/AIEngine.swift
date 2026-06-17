@@ -201,14 +201,14 @@ public struct AIEngine: Sendable {
         if q.contains("harvest") || (q.contains("orchard") && !q.contains("irrigation")) {
             let orchards = entities.filter { if case .orchard = $0.detail { return true }; return false }
             let ready = orchards.filter { e -> Bool in
-                if case .orchard(let o) = e.detail { return o.harvestReadiness > 0.70 }
+                if case .orchard(let o) = e.detail { return o.phenophase == .ripening || o.phenophase == .harvest }
                 return false
             }
             return AssistantMessage(role: .prvio,
                 text: ready.isEmpty
-                    ? "No orchard sections are harvest-ready yet (target: 70% ripeness). I'll alert you when the threshold is reached."
-                    : "\(ready.count) orchard section\(ready.count == 1 ? "" : "s") exceed 70% harvest readiness. Consider scheduling the picking crew this week.",
-                highlightedEntityIDs: ready.map(\.id))
+                    ? "No orchard sections are harvest-ready yet. I'll alert you when phenophase reaches ripening."
+                    : "\(ready.count) orchard section\(ready.count == 1 ? "" : "s") \(ready.count == 1 ? "is" : "are") at ripening or harvest stage. Consider scheduling the picking crew this week.",
+                highlightedEntityIDs: ready.map { $0.id })
         }
 
         if q.contains("offline") || (q.contains("device") && (q.contains("down") || q.contains("fail"))) {
@@ -220,8 +220,8 @@ public struct AIEngine: Sendable {
                 text: offline.isEmpty
                     ? "All devices are online — no connectivity issues detected across the property."
                     : "\(offline.count) device\(offline.count == 1 ? " is" : "s are") offline. Check power and network connectivity for these nodes.",
-                highlightedEntityIDs: offline.map(\.id),
-                insights: insights.filter { $0.module == .home && $0.severity >= .advisory })
+                insights: insights.filter { $0.module == .home && $0.severity >= .advisory },
+                highlightedEntityIDs: offline.map { $0.id })
         }
 
         if q.contains("greenhouse") || (q.contains("co2") && !q.contains("pond")) || (q.contains("temperature") && !q.contains("pond")) {
@@ -234,8 +234,8 @@ public struct AIEngine: Sendable {
                 text: hot.isEmpty
                     ? "Greenhouse climate is within target — temperature, CO₂ and humidity all look good."
                     : "\(hot.count) greenhouse\(hot.count == 1 ? "" : "s") running above 30°C. Open vents and shade if temperature exceeds 35°C.",
-                highlightedEntityIDs: greenhouses.map(\.id),
-                insights: insights.filter { $0.module == .greenhouse })
+                insights: insights.filter { $0.module == .greenhouse },
+                highlightedEntityIDs: greenhouses.map { $0.id })
         }
 
         if q.contains("nitrogen") || q.contains("fertiliz") || q.contains("npk") || q.contains("field") {
@@ -260,8 +260,8 @@ public struct AIEngine: Sendable {
                 text: pestEntities.isEmpty
                     ? "No pest alerts from Camera AI right now — all clear across the property."
                     : "Camera AI has flagged \(pestEntities.count) tree\(pestEntities.count == 1 ? "" : "s") with pest activity. Consider targeted treatment and monitoring spread.",
-                highlightedEntityIDs: pestEntities.map(\.id),
-                insights: insights.filter { $0.module == .forest })
+                insights: insights.filter { $0.module == .forest },
+                highlightedEntityIDs: pestEntities.map { $0.id })
         }
 
         let topInsight = insights.first
