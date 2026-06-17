@@ -69,21 +69,22 @@ public struct ModuleSummaryIntent: AppIntent {
     }
 }
 
-// MARK: - Entity Focus
+// MARK: - Open Module (navigates to that module in the live twin)
 
-public struct EntityFocusIntent: AppIntent {
-    public static let title: LocalizedStringResource = "Go to Entity"
+public struct OpenModuleIntent: AppIntent {
+    public static let title: LocalizedStringResource = "Open Module"
     public static let description = IntentDescription(
-        "Open the Digital Twin and navigate to a named entity on the property.")
+        "Open the Digital Twin and navigate directly to a specific property module.")
     public static var openAppWhenRun: Bool = true
 
-    @Parameter(title: "Entity") public var entityName: String
+    @Parameter(title: "Module") public var module: PropertyModuleEntity
 
     public init() {}
-    public init(entityName: String) { self.entityName = entityName }
+    public init(module: PropertyModuleEntity) { self.module = module }
 
     public func perform() async throws -> some IntentResult & ProvidesDialog {
-        return .result(dialog: IntentDialog("Opening \(entityName) on your Digital Twin."))
+        let label = PropertyModuleEntity.caseDisplayRepresentations[module]?.title.key ?? module.rawValue
+        return .result(dialog: IntentDialog("Opening \(label) on your Digital Twin."))
     }
 }
 
@@ -112,12 +113,12 @@ public struct PrvioShortcutsProvider: AppShortcutsProvider {
             systemImageName: "chart.bar.xaxis")
 
         AppShortcut(
-            intent: EntityFocusIntent(),
+            intent: OpenModuleIntent(),
             phrases: [
-                "Show my \(\.$entityName) in \(.applicationName)",
-                "\(.applicationName) go to \(\.$entityName)",
+                "Open my \(\.$module) in \(.applicationName)",
+                "\(.applicationName) navigate to \(\.$module)",
             ],
-            shortTitle: "Go to Entity",
+            shortTitle: "Open Module",
             systemImageName: "mappin.circle.fill")
     }
 }
