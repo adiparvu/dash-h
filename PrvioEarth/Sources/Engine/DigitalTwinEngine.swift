@@ -26,6 +26,9 @@ public final class DigitalTwinEngine {
     /// Automations (Node-RED inspired flows) acting on the twin.
     public private(set) var automations: [Automation] = []
 
+    /// Chronological log of automation trigger fires (capped at 50 entries).
+    public private(set) var automationFiredEvents: [AutomationFiredEvent] = []
+
     /// The property's geographic anchor (map centers here on launch).
     public let anchor: GeoPoint
 
@@ -93,6 +96,15 @@ public final class DigitalTwinEngine {
         automations.append(automation)
     }
 
+    /// Apply a set of mutations to multiple entities in one pass — avoids
+    /// triggering repeated `recomputeInsights` when wiring in external sensors.
+    public func batchUpdate(_ updates: [(id: UUID, transform: (inout PropertyEntity) -> Void)]) {
+        for update in updates {
+            guard let idx = entities.firstIndex(where: { $0.id == update.id }) else { continue }
+            update.transform(&entities[idx])
+        }
+    }
+
     // MARK: - Live Telemetry
 
     /// Begin streaming simulated sensor updates into the twin. In production
@@ -119,6 +131,7 @@ public final class DigitalTwinEngine {
         // health-score drift is still applied on every tick so the map feels live.
         guard tickCount % 3 == 0 else { return }
         recomputeInsights()
+        evaluateAutomations()
     }
 
     // MARK: - Intelligence
@@ -146,6 +159,66 @@ public final class DigitalTwinEngine {
         TwinSnapshotBridge.save(snap)
     }
 }
+
+    // MARK: - Automation trigger evaluation
+
+    private func evaluateAutomations() {
+        let now = Date.now
+        for automation in automations where automation.isEnabled {
+            // Rate-limit to prevent the same automation flooding the log (60 s minimum gap)
+            if let last = automationFiredEvents.last(where: { $0.automationID == automation.id }),
+               now.timeIntervalSince(last.firedAt) < 60 { continue }
+
+            guard let trigger = automation.nodes.first(where: { $0.role == .trigger }),
+                  isTriggerMet(trigger, for: automation) else { continue }
+
+            let event = AutomationFiredEvent(
+                automationID: automation.id,
+                automationName: automation.name,
+                module: automation.module,
+                triggerTitle: trigger.title)
+            automationFiredEvents.append(event)
+            if automationFiredEvents.count > 50 { automationFiredEvents.removeFirst() }
+        }
+    }
+
+    private func isTriggerMet(_ trigger: Automation.Node, for automation: Automation) -> Bool {
+        let cfg = trigger.config.lowercased()
+
+        if cfg.contains("oxygen") || cfg.contains("pond.oxygen") {
+            return entities.contains { e in
+                if case .pond(let p) = e.detail { return p.dissolvedOxygenMgL < 5 }
+                return false
+            }
+        }
+        if cfg.contains("moisture") || cfg.contains("soil") {
+            return entities.contains { e in
+                if case .garden(let g) = e.detail { return g.soilMoisture < 0.35 }
+                return false
+            }
+        }
+        if cfg.contains("orchard") {
+            return entities.contains { e in
+                if case .orchard(let o) = e.detail { return !o.irrigationActive }
+                return false
+            }
+        }
+        if cfg.contains("co2") {
+            return entities.contains { e in
+                if case .greenhouse(let g) = e.detail { return g.co2Ppm > 1200 }
+                return false
+            }
+        }
+        if cfg.contains("tree.pest") {
+            return entities.contains { e in
+                if case .tree(let t) = e.detail { return t.pestDetected }
+                return false
+            }
+        }
+        // Fallback: fire if any entity in the automation's module is stressed or critical
+        return entities.filter { $0.kind.module == automation.module }
+                       .contains { $0.health.score < 0.55 }
+    }
 
 // MARK: - Telemetry jitter helper
 

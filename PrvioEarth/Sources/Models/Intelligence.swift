@@ -104,3 +104,25 @@ public struct Automation: Identifiable, Hashable, Sendable {
         self.nodes = nodes; self.module = module
     }
 }
+
+// MARK: - Automation fired event
+
+/// Recorded each time a live trigger condition is met, powering the
+/// AutomationStudio activity feed and the PRVIO Intelligence context.
+public struct AutomationFiredEvent: Identifiable, Sendable {
+    public let id = UUID()
+    public var automationID: UUID
+    public var automationName: String
+    public var module: PropertyModule
+    public var triggerTitle: String
+    public var firedAt: Date
+
+    public init(automationID: UUID, automationName: String, module: PropertyModule,
+                triggerTitle: String, firedAt: Date = .now) {
+        self.automationID = automationID
+        self.automationName = automationName
+        self.module = module
+        self.triggerTitle = triggerTitle
+        self.firedAt = firedAt
+    }
+}
