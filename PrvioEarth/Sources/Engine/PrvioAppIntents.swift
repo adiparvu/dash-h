@@ -63,7 +63,7 @@ public struct ModuleSummaryIntent: AppIntent {
     public func perform() async throws -> some IntentResult & ProvidesDialog {
         let snap  = TwinSnapshotBridge.load() ?? TwinSnapshot.placeholder
         let pct   = Int(snap.propertyHealth * 100)
-        let label = module.caseDisplayRepresentations[module]?.title.key ?? module.rawValue
+        let label = PropertyModuleEntity.caseDisplayRepresentations[module]?.title.key ?? module.rawValue
         return .result(dialog: IntentDialog(
             "Your \(label) module is part of a property at \(pct)% overall health. \(snap.topInsight)."))
     }
