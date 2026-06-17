@@ -161,6 +161,14 @@ struct WatchComplicationEntryView: View {
         case .accessoryInline:
             Label("Property \(Int(entry.snapshot.propertyHealth * 100))%",
                   systemImage: "globe.americas.fill")
+        case .accessoryCorner:
+            Gauge(value: entry.snapshot.propertyHealth, in: 0...1) {
+                Image(systemName: "globe.americas.fill")
+            }
+            .gaugeStyle(.accessoryCircular)
+            .widgetLabel {
+                Text("PRVIO \(Int(entry.snapshot.propertyHealth * 100))%")
+            }
         default:
             Gauge(value: entry.snapshot.propertyHealth, in: 0...1) {
                 EmptyView()
@@ -185,7 +193,7 @@ public struct WatchHealthComplication: Widget {
         }
         .configurationDisplayName("Property Health")
         .description("Live health score from your PRVIO Earth Digital Twin.")
-        .supportedFamilies([.accessoryCircular, .accessoryRectangular, .accessoryInline])
+        .supportedFamilies([.accessoryCircular, .accessoryRectangular, .accessoryInline, .accessoryCorner])
     }
 }
 #endif

@@ -10,6 +10,7 @@
 
 import AppIntents
 import Foundation
+import UserNotifications
 
 // MARK: - Module enum for Siri disambiguation
 
@@ -188,6 +189,71 @@ public struct WaterStatusIntent: AppIntent {
     }
 }
 
+// MARK: - Irrigate Module
+
+public struct IrrigateModuleIntent: AppIntent {
+    public static let title: LocalizedStringResource = "Schedule Irrigation"
+    public static let description = IntentDescription(
+        "Schedule an irrigation reminder for a specific property module.")
+    public static var openAppWhenRun: Bool = false
+
+    @Parameter(title: "Module") public var module: PropertyModuleEntity
+    @Parameter(title: "In minutes", default: 5) public var delayMinutes: Int
+
+    public init() {}
+    public init(module: PropertyModuleEntity, delayMinutes: Int = 5) {
+        self.module = module
+        self.delayMinutes = delayMinutes
+    }
+
+    public func perform() async throws -> some IntentResult & ProvidesDialog {
+        let label = PropertyModuleEntity.caseDisplayRepresentations[module]?.title.key ?? module.rawValue
+        let content = UNMutableNotificationContent()
+        content.title = "Irrigation Reminder"
+        content.body = "Time to irrigate your \(label)."
+        content.sound = .default
+        content.categoryIdentifier = "prvio.alert"
+        let delay = TimeInterval(max(1, delayMinutes) * 60)
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: delay, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: "prvio.irrigate.\(module.rawValue).\(Int(Date().timeIntervalSince1970))",
+            content: content,
+            trigger: trigger)
+        try? await UNUserNotificationCenter.current().add(request)
+        let inStr = delayMinutes == 1 ? "in 1 minute" : "in \(delayMinutes) minutes"
+        return .result(dialog: IntentDialog("Irrigation reminder set for \(label) \(inStr)."))
+    }
+}
+
+// MARK: - Weather Outlook
+
+public struct WeatherOutlookIntent: AppIntent {
+    public static let title: LocalizedStringResource = "Weather Outlook"
+    public static let description = IntentDescription(
+        "Get the current weather outlook and any active weather alerts for your property.")
+    public static var openAppWhenRun: Bool = false
+
+    public init() {}
+
+    public func perform() async throws -> some IntentResult & ProvidesDialog {
+        let snap = TwinSnapshotBridge.load() ?? TwinSnapshot.placeholder
+        let insight = snap.topInsight
+        let weatherTerms = ["frost", "heat", "rain", "wind", "drought", "snow", "storm", "cold", "warm"]
+        let isWeatherAlert = weatherTerms.contains { insight.localizedCaseInsensitiveContains($0) }
+        if isWeatherAlert {
+            return .result(dialog: IntentDialog(
+                "Weather alert: \(insight). Property health is \(Int(snap.propertyHealth * 100))%."))
+        } else if snap.alerts == 0 {
+            return .result(dialog: IntentDialog(
+                "No active weather alerts. \(insight). Property health: \(Int(snap.propertyHealth * 100))%."))
+        } else {
+            let aStr = snap.alerts == 1 ? "1 active alert" : "\(snap.alerts) active alerts"
+            return .result(dialog: IntentDialog(
+                "No weather alerts, but \(aStr) on the property. \(insight)."))
+        }
+    }
+}
+
 // MARK: - Shortcuts Provider
 
 public struct PrvioShortcutsProvider: AppShortcutsProvider {
@@ -268,5 +334,24 @@ public struct PrvioShortcutsProvider: AppShortcutsProvider {
             ],
             shortTitle: "Water Status",
             systemImageName: "drop.fill")
+
+        AppShortcut(
+            intent: IrrigateModuleIntent(),
+            phrases: [
+                "Schedule irrigation for my \(\.$module) with \(.applicationName)",
+                "\(.applicationName) irrigate \(\.$module)",
+            ],
+            shortTitle: "Schedule Irrigation",
+            systemImageName: "drop.circle.fill")
+
+        AppShortcut(
+            intent: WeatherOutlookIntent(),
+            phrases: [
+                "Weather outlook in \(.applicationName)",
+                "Any weather alerts in \(.applicationName)",
+                "\(.applicationName) weather",
+            ],
+            shortTitle: "Weather Outlook",
+            systemImageName: "cloud.sun.fill")
     }
 }

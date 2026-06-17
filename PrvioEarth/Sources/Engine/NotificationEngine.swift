@@ -44,6 +44,9 @@ public final class NotificationEngine {
     // MARK: - Schedule insights as notifications
 
     public func schedule(_ insights: [PrvioInsight]) {
+        // Honour the user's master notification toggle (absent key → enabled).
+        let enabled = UserDefaults.standard.object(forKey: "notificationsEnabled") as? Bool ?? true
+        guard enabled else { return }
         let center = UNUserNotificationCenter.current()
         center.getNotificationSettings { settings in
             guard settings.authorizationStatus == .authorized else { return }
@@ -54,6 +57,9 @@ public final class NotificationEngine {
                 content.body = insight.detail + (insight.recommendation.map { " " + $0 } ?? "")
                 content.sound = insight.severity == .critical ? .defaultCritical : .default
                 content.categoryIdentifier = "prvio.alert"
+                if #available(iOS 15, *) {
+                    content.interruptionLevel = insight.severity == .critical ? .critical : .active
+                }
 
                 let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
                 let request = UNNotificationRequest(

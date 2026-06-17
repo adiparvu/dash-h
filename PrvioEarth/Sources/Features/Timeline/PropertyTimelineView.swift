@@ -106,6 +106,24 @@ public struct PropertyTimelineView: View {
             .map { (label: $0, events: groups[$0]!) }
     }
 
+    // MARK: - Export
+
+    private var exportSummary: String {
+        var lines = [
+            "PRVIO EARTH — Timeline Export",
+            "Filter: \(filter.rawValue)",
+            "Date: \(Date().formatted(.dateTime.day().month().year()))",
+            String(repeating: "-", count: 42),
+        ]
+        for event in filteredEvents {
+            let stamp = event.firedAt.formatted(.dateTime.hour().minute().day().month())
+            lines.append("\(stamp)  [\(event.module.title)]  \(event.title)")
+            lines.append("  \(event.detail)")
+        }
+        if filteredEvents.isEmpty { lines.append("No events recorded.") }
+        return lines.joined(separator: "\n")
+    }
+
     // MARK: - Body
 
     public var body: some View {
@@ -134,10 +152,22 @@ public struct PropertyTimelineView: View {
     // MARK: - Subviews
 
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Timeline").font(.prvioTitle())
-            Text("\(allEvents.count) events on record")
-                .font(.prvioCaption()).foregroundStyle(.secondary)
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Timeline").font(.prvioTitle())
+                Text("\(allEvents.count) events on record")
+                    .font(.prvioCaption()).foregroundStyle(.secondary)
+            }
+            Spacer()
+            ShareLink(item: exportSummary,
+                      subject: Text("PRVIO Timeline"),
+                      message: Text("Exported from PRVIO EARTH")) {
+                Image(systemName: "square.and.arrow.up")
+                    .font(.prvioLabel())
+                    .padding(Spacing.sm)
+                    .liquidGlass(.raised, tint: .prvioHorizon, interactive: false)
+            }
+            .buttonStyle(.plain)
         }
     }
 
