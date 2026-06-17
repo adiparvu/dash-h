@@ -70,7 +70,9 @@ public struct FloatingNavBar: View {
                 ForEach(PropertyModule.allCases) { module in
                     let isSelected = module == selection
                     Button {
+                        #if os(iOS)
                         HapticEngine.selection()
+                        #endif
                         withAnimation(.prvioMorph) { selection = module }
                     } label: {
                         HStack(spacing: 6) {
