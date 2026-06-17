@@ -20,7 +20,9 @@ public enum PropertySeed {
         out.append(contentsOf: orchard())
         out.append(contentsOf: forest())
         out.append(pond())
+        out.append(lake())
         out.append(contentsOf: devices())
+        out.append(contentsOf: perimeterSecurity())
         out.append(contentsOf: gardenBeds())
         out.append(contentsOf: greenhouseZones())
         out.append(contentsOf: agricultureFields())
@@ -73,6 +75,28 @@ public enum PropertySeed {
                 health: HealthState(score: 0.99),
                 metrics: ["moisture": 0.47, "pH": 6.55, "temp": 20.0],
                 detail: .device(DeviceProfile(protocolType: .thread, isOnline: true, isOn: true, firmware: "3.1.0"))),
+            PropertyEntity(name: "Raised Bed B", kind: .garden,
+                location: offset(-44, -30),
+                health: HealthState(score: 0.78),
+                metrics: ["soilMoisture": 0.44, "soilPH": 7.1, "soilTemp": 20.2],
+                detail: .garden(GardenProfile(
+                    beds: ["Carrot", "Beetroot", "Spinach", "Kale"],
+                    soilMoisture: 0.44, soilPH: 7.1, soilTemperatureC: 20.2,
+                    lastWatered: .now.addingTimeInterval(-108_000),
+                    nextWatering: .now.addingTimeInterval(28_800),
+                    sunHoursPerDay: 7.0, mulched: true,
+                    companions: ["Dill", "Chamomile"]))),
+            PropertyEntity(name: "Compost Bed C", kind: .garden,
+                location: offset(-22, -35),
+                health: HealthState(score: 0.91),
+                metrics: ["soilMoisture": 0.62, "soilPH": 6.6, "soilTemp": 23.0],
+                detail: .garden(GardenProfile(
+                    beds: ["Pumpkin", "Squash", "Courgette"],
+                    soilMoisture: 0.62, soilPH: 6.6, soilTemperatureC: 23.0,
+                    lastWatered: .now.addingTimeInterval(-43_200),
+                    nextWatering: .now.addingTimeInterval(64_800),
+                    sunHoursPerDay: 8.5, mulched: true,
+                    companions: ["Nasturtium", "Borage"]))),
         ]
     }
 
@@ -99,6 +123,16 @@ public enum PropertySeed {
                 location: offset(55, -45),
                 health: HealthState(score: 0.88),
                 metrics: ["colonyStrength": 0.88, "honeyKg": 6.4]),
+            PropertyEntity(name: "Propagation House", kind: .greenhouse,
+                location: offset(50, -36),
+                health: HealthState(score: 0.85),
+                metrics: ["temp": 22.0, "humidity": 0.82, "co2Ppm": 640, "lightLux": 6_000],
+                detail: .greenhouse(GreenhouseProfile(
+                    temperatureC: 22.0, humidity: 0.82, co2Ppm: 640,
+                    lightLux: 6_000, growLightsOn: false, ventilationOn: true,
+                    zones: 2,
+                    crops: ["Seedlings", "Microgreens", "Herbs"],
+                    nextHarvest: .now.addingTimeInterval(14 * 86_400)))),
         ]
     }
 
@@ -136,53 +170,58 @@ public enum PropertySeed {
         ]
     }
 
-    // MARK: - Orchard
+    // MARK: - Orchard (12 trees — added Peach, Apricot, Quince)
 
     private static func orchard() -> [PropertyEntity] {
-        let species = ["Apple", "Pear", "Cherry", "Plum"]
-        return (0..<8).map { i in
+        let species = ["Apple", "Pear", "Cherry", "Plum", "Peach", "Apricot", "Quince"]
+        let phases: [OrchardProfile.Phenophase] = [.budding, .flowering, .fruiting, .ripening, .harvest]
+        let stressedIdx: Set<Int> = [3, 9]
+        return (0..<12).map { i in
             let sp = species[i % species.count]
-            let stressed = i == 3
+            let stressed = stressedIdx.contains(i)
+            let phase = phases[i % phases.count]
             return PropertyEntity(
                 name: "\(sp) Tree \(i + 1)", kind: .fruitTree,
-                location: offset(Double(80 + (i % 4) * 12), Double(-60 - (i / 4) * 12)),
-                health: HealthState(score: stressed ? 0.48 : Double.random(in: 0.74...0.93),
-                                    diseaseRisk: stressed ? 0.68 : Double.random(in: 0.05...0.3)),
-                metrics: ["soilMoisture": stressed ? 0.28 : 0.5, "expectedYieldKg": Double.random(in: 30...70)],
+                location: offset(Double(78 + (i % 4) * 13), Double(-56 - (i / 4) * 14)),
+                health: HealthState(score: stressed ? 0.45 : Double.random(in: 0.72...0.94),
+                                    diseaseRisk: stressed ? 0.62 : Double.random(in: 0.04...0.28)),
+                metrics: ["soilMoisture": stressed ? 0.26 : Double.random(in: 0.44...0.68),
+                          "expectedYieldKg": Double.random(in: 28...82)],
                 detail: .orchard(OrchardProfile(
-                    species: sp, phenophase: .fruiting,
-                    expectedYieldKg: Double.random(in: 30...70),
-                    lastHarvestKg: Double.random(in: 25...60),
-                    nextHarvest: .now.addingTimeInterval(45 * 86_400),
+                    species: sp, phenophase: phase,
+                    expectedYieldKg: Double.random(in: 28...82),
+                    lastHarvestKg: Double.random(in: 22...65),
+                    nextHarvest: .now.addingTimeInterval(Double(40 + i * 3) * 86_400),
                     irrigationActive: !stressed,
-                    nextFertilization: .now.addingTimeInterval(10 * 86_400),
-                    nextPruning: .now.addingTimeInterval(20 * 86_400))))
+                    nextFertilization: .now.addingTimeInterval(Double(8 + i) * 86_400),
+                    nextPruning: .now.addingTimeInterval(Double(18 + i * 2) * 86_400))))
         }
     }
 
-    // MARK: - Forest
+    // MARK: - Forest (14 trees — richer species mix)
 
     private static func forest() -> [PropertyEntity] {
-        let species = ["Oak", "Beech", "Pine", "Birch", "Maple"]
-        return (0..<10).map { i in
+        let species = ["Oak", "Beech", "Pine", "Birch", "Maple", "Elm", "Walnut", "Chestnut"]
+        let pestIndices: Set<Int> = [6, 11]
+        return (0..<14).map { i in
             let sp = species[i % species.count]
-            let pest = i == 6
+            let pest = pestIndices.contains(i)
+            let score = pest ? Double.random(in: 0.46...0.60) : Double.random(in: 0.72...0.97)
             return PropertyEntity(
-                name: "\(sp) #\(i + 1)", kind: .tree,
-                location: offset(Double(-100 - (i % 5) * 14), Double(40 + (i / 5) * 16)),
-                health: HealthState(score: pest ? 0.52 : Double.random(in: 0.7...0.96),
-                                    diseaseRisk: pest ? 0.55 : Double.random(in: 0...0.25)),
-                metrics: ["soilMoisture": Double.random(in: 0.4...0.7), "height_m": Double.random(in: 8...24)],
+                name: "\(sp) #\(String(format: "%02d", i + 1))", kind: .tree,
+                location: offset(Double(-96 - (i % 7) * 13), Double(36 + (i / 7) * 18)),
+                health: HealthState(score: score, diseaseRisk: pest ? Double.random(in: 0.45...0.65) : Double.random(in: 0...0.25)),
+                metrics: ["soilMoisture": Double.random(in: 0.38...0.72), "height_m": Double.random(in: 7...26)],
                 detail: .tree(TreeProfile(
-                    species: sp, ageYears: Int.random(in: 12...80),
-                    heightMeters: Double.random(in: 8...24),
-                    trunkDiameterCm: Double.random(in: 20...70),
-                    growthRateCmPerYear: Double.random(in: 15...45),
-                    carbonStorageKg: Double.random(in: 200...1500),
-                    biomassKg: Double.random(in: 400...3000),
+                    species: sp, ageYears: Int.random(in: 10...90),
+                    heightMeters: Double.random(in: 7...26),
+                    trunkDiameterCm: Double.random(in: 18...80),
+                    growthRateCmPerYear: Double.random(in: 12...48),
+                    carbonStorageKg: Double.random(in: 180...1800),
+                    biomassKg: Double.random(in: 350...3600),
                     pestDetected: pest,
-                    soilMoisture: Double.random(in: 0.4...0.7),
-                    soilPH: Double.random(in: 5.5...7.0))))
+                    soilMoisture: Double.random(in: 0.38...0.72),
+                    soilPH: Double.random(in: 5.2...7.2))))
         }
     }
 
@@ -198,6 +237,20 @@ public enum PropertySeed {
                 waterTempC: 18.5, pH: 7.2, dissolvedOxygenMgL: 7.8,
                 ammoniaMgL: 0.18, nitrateMgL: 12.0, waterLevelPercent: 92,
                 fishCount: 24, pumpsOnline: 2, uvSterilizerOn: true)))
+    }
+
+    // MARK: - Lake (second, larger water body)
+
+    private static func lake() -> PropertyEntity {
+        PropertyEntity(
+            name: "Estate Lake", kind: .pond,
+            location: offset(-120, 90),
+            health: HealthState(score: 0.88),
+            metrics: ["temp": 16.2, "pH": 7.5, "oxygen": 8.4, "waterLevel": 0.96],
+            detail: .pond(PondProfile(
+                waterTempC: 16.2, pH: 7.5, dissolvedOxygenMgL: 8.4,
+                ammoniaMgL: 0.08, nitrateMgL: 8.0, waterLevelPercent: 96,
+                fishCount: 148, pumpsOnline: 1, uvSterilizerOn: false)))
     }
 
     // MARK: - Devices
@@ -224,6 +277,41 @@ public enum PropertySeed {
                 location: offset(-54, 62), health: HealthState(score: 0.86),
                 metrics: ["powerW": 60],
                 detail: .device(DeviceProfile(protocolType: .matter, isOnline: true, isOn: true, powerWatts: 60, firmware: "5.0.1"))),
+            PropertyEntity(name: "Smart Energy Meter", kind: .solarPanel,
+                location: offset(4, 6), health: HealthState(score: 0.99),
+                metrics: ["powerW": 0, "energyKwh": 18.4, "exportKwh": 9.2],
+                detail: .device(DeviceProfile(protocolType: .matter, isOnline: true, isOn: true, powerWatts: 0, firmware: "3.0.0"))),
+            PropertyEntity(name: "Water Meter", kind: .irrigationValve,
+                location: offset(6, 8), health: HealthState(score: 0.98),
+                metrics: ["flowLpm": 0, "totalLiters": 42_800],
+                detail: .device(DeviceProfile(protocolType: .thread, isOnline: true, isOn: true, firmware: "2.1.0"))),
+            PropertyEntity(name: "Irrigation Valve 2", kind: .irrigationValve,
+                location: offset(-28, -18), health: HealthState(score: 0.91),
+                metrics: ["flowLpm": 12],
+                detail: .device(DeviceProfile(protocolType: .thread, isOnline: true, isOn: false, firmware: "1.1.2"))),
+        ]
+    }
+
+    // MARK: - Perimeter security cameras
+
+    private static func perimeterSecurity() -> [PropertyEntity] {
+        [
+            PropertyEntity(name: "East Perimeter Cam", kind: .camera,
+                location: offset(160, 60), health: HealthState(score: 0.97),
+                metrics: [:],
+                detail: .device(DeviceProfile(protocolType: .wifi, isOnline: true, isOn: true, firmware: "4.2.1"))),
+            PropertyEntity(name: "West Perimeter Cam", kind: .camera,
+                location: offset(-160, 60), health: HealthState(score: 0.94),
+                metrics: [:],
+                detail: .device(DeviceProfile(protocolType: .wifi, isOnline: true, isOn: true, firmware: "4.2.1"))),
+            PropertyEntity(name: "Barn Camera", kind: .camera,
+                location: offset(-80, -40), health: HealthState(score: 0.88),
+                metrics: [:],
+                detail: .device(DeviceProfile(protocolType: .wifi, isOnline: true, isOn: true, firmware: "4.1.0"))),
+            PropertyEntity(name: "Smart Lock — Front Door", kind: .camera,
+                location: offset(8, 4), health: HealthState(score: 1.0),
+                metrics: ["batteryPercent": 0.82],
+                detail: .device(DeviceProfile(protocolType: .matter, isOnline: true, isOn: false, batteryPercent: 0.82, firmware: "6.0.0"))),
         ]
     }
 
@@ -261,6 +349,16 @@ public enum PropertySeed {
                 .init(role: .condition, title: "No rain forecast 48 h", config: "weather.rain"),
                 .init(role: .action, title: "Start pivot irrigator 2 h", config: "irrigator.pivot1")
             ], module: .agriculture),
+            Automation(name: "Forest Pest Alert", nodes: [
+                .init(role: .trigger, title: "Pest detected on any tree", config: "tree.pest"),
+                .init(role: .condition, title: "Alert not sent in 24 h", config: "cooldown:86400"),
+                .init(role: .action, title: "Notify owner + flag for inspection", config: "alert:push")
+            ], module: .forest),
+            Automation(name: "Orchard Soil Moisture Guard", nodes: [
+                .init(role: .trigger, title: "Orchard soil moisture < 30%", config: "orchard.soil"),
+                .init(role: .condition, title: "Temperature > 25°C", config: "weather.temp"),
+                .init(role: .action, title: "Activate drip irrigation 45 min", config: "valve.orchard")
+            ], module: .orchard),
         ]
     }
 

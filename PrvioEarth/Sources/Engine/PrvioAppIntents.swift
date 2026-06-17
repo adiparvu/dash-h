@@ -62,10 +62,12 @@ public struct ModuleSummaryIntent: AppIntent {
 
     public func perform() async throws -> some IntentResult & ProvidesDialog {
         let snap  = TwinSnapshotBridge.load() ?? TwinSnapshot.placeholder
-        let pct   = Int(snap.propertyHealth * 100)
         let label = PropertyModuleEntity.caseDisplayRepresentations[module]?.title.key ?? module.rawValue
+        let modHealth = snap.moduleHealth[module.rawValue] ?? snap.propertyHealth
+        let pct = Int(modHealth * 100)
+        let status = pct >= 85 ? "healthy" : pct >= 60 ? "needs attention" : "critical"
         return .result(dialog: IntentDialog(
-            "Your \(label) module is part of a property at \(pct)% overall health. \(snap.topInsight)."))
+            "\(label) is at \(pct)% health — \(status). \(snap.topInsight)."))
     }
 }
 
@@ -126,6 +128,66 @@ public struct AlertsIntent: AppIntent {
     }
 }
 
+// MARK: - Forest Status
+
+public struct ForestStatusIntent: AppIntent {
+    public static let title: LocalizedStringResource = "Forest Status"
+    public static let description = IntentDescription(
+        "Get the current health, carbon sequestration and pest status of your forest.")
+    public static var openAppWhenRun: Bool = false
+
+    public init() {}
+
+    public func perform() async throws -> some IntentResult & ProvidesDialog {
+        let snap = TwinSnapshotBridge.load() ?? TwinSnapshot.placeholder
+        let forestHealth = snap.moduleHealth["forest"].map { Int($0 * 100) } ?? Int(snap.propertyHealth * 100)
+        let status = forestHealth >= 85 ? "healthy and thriving" : forestHealth >= 60 ? "under some stress" : "critical — action needed"
+        return .result(dialog: IntentDialog(
+            "Your forest is \(status) at \(forestHealth)% health. \(snap.topInsight)."))
+    }
+}
+
+// MARK: - Sustainability Score
+
+public struct SustainabilityScoreIntent: AppIntent {
+    public static let title: LocalizedStringResource = "Sustainability Score"
+    public static let description = IntentDescription(
+        "Get the overall sustainability score of your property — carbon, energy and biodiversity.")
+    public static var openAppWhenRun: Bool = false
+
+    public init() {}
+
+    public func perform() async throws -> some IntentResult & ProvidesDialog {
+        let snap = TwinSnapshotBridge.load() ?? TwinSnapshot.placeholder
+        let modules = snap.moduleHealth.values
+        let avg = modules.isEmpty ? snap.propertyHealth : modules.reduce(0, +) / Double(modules.count)
+        let score = Int(avg * 100)
+        let kwh = String(format: "%.1f", snap.energyKwh)
+        let grade = score >= 90 ? "A — outstanding" : score >= 75 ? "B — good" : score >= 60 ? "C — average" : "D — needs work"
+        return .result(dialog: IntentDialog(
+            "Property sustainability grade: \(grade). Overall score \(score)%. Energy today: \(kwh) kWh."))
+    }
+}
+
+// MARK: - Water Status
+
+public struct WaterStatusIntent: AppIntent {
+    public static let title: LocalizedStringResource = "Water Status"
+    public static let description = IntentDescription(
+        "Get the water and pond health status for your property.")
+    public static var openAppWhenRun: Bool = false
+
+    public init() {}
+
+    public func perform() async throws -> some IntentResult & ProvidesDialog {
+        let snap = TwinSnapshotBridge.load() ?? TwinSnapshot.placeholder
+        let pondHealth = snap.moduleHealth["pond"].map { Int($0 * 100) } ?? Int(snap.propertyHealth * 100)
+        let status = pondHealth >= 85 ? "all water systems nominal" : pondHealth >= 60 ? "water systems need monitoring" : "water alert active"
+        return .result(dialog: IntentDialog(
+            "Pond health: \(pondHealth)% — \(status). \(snap.topInsight)."))
+    }
+}
+
 // MARK: - Shortcuts Provider
 
 public struct PrvioShortcutsProvider: AppShortcutsProvider {
@@ -176,5 +238,35 @@ public struct PrvioShortcutsProvider: AppShortcutsProvider {
             ],
             shortTitle: "Active Alerts",
             systemImageName: "bell.badge.fill")
+
+        AppShortcut(
+            intent: ForestStatusIntent(),
+            phrases: [
+                "Forest status in \(.applicationName)",
+                "How is my forest doing with \(.applicationName)",
+                "\(.applicationName) forest health",
+            ],
+            shortTitle: "Forest Status",
+            systemImageName: "tree.fill")
+
+        AppShortcut(
+            intent: SustainabilityScoreIntent(),
+            phrases: [
+                "Sustainability score in \(.applicationName)",
+                "What is my property sustainability with \(.applicationName)",
+                "\(.applicationName) eco score",
+            ],
+            shortTitle: "Sustainability Score",
+            systemImageName: "leaf.fill")
+
+        AppShortcut(
+            intent: WaterStatusIntent(),
+            phrases: [
+                "Water status in \(.applicationName)",
+                "How is my pond doing with \(.applicationName)",
+                "\(.applicationName) pond health",
+            ],
+            shortTitle: "Water Status",
+            systemImageName: "drop.fill")
     }
 }

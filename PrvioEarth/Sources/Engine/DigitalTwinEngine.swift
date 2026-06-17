@@ -35,6 +35,7 @@ public final class DigitalTwinEngine {
     private let ai: AIEngine
     private var tickTask: Task<Void, Never>?
     private var tickCount = 0
+    private var lastCriticalTitles: Set<String> = []
 
     public init(anchor: GeoPoint, seed: [PropertyEntity], automations: [Automation], ai: AIEngine = AIEngine()) {
         self.anchor = anchor
@@ -151,6 +152,14 @@ public final class DigitalTwinEngine {
 
     private func recomputeInsights() {
         insights = ai.deriveInsights(from: entities)
+        let newCriticalTitles = Set(insights.filter { $0.severity == .critical }.map(\.title))
+        let addedCriticals = newCriticalTitles.subtracting(lastCriticalTitles)
+        if !addedCriticals.isEmpty {
+            #if os(iOS)
+            HapticEngine.error()
+            #endif
+        }
+        lastCriticalTitles = newCriticalTitles
         pushSnapshot()
     }
 
@@ -191,6 +200,9 @@ public final class DigitalTwinEngine {
                 triggerTitle: trigger.title)
             automationFiredEvents.append(event)
             if automationFiredEvents.count > 50 { automationFiredEvents.removeFirst() }
+            #if os(iOS)
+            HapticEngine.impact(.heavy)
+            #endif
 
             // Start a Live Activity for irrigation automations so the owner
             // can track the cycle from the Lock Screen and Dynamic Island.
