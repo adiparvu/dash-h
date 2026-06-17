@@ -23,6 +23,8 @@ public struct GardenView: View {
     }
     private var insights: [PrvioInsight] { twin.insights(for: .garden) }
 
+    @State private var showAnalytics = false
+
     private var moistureData: [(name: String, moisture: Double)] {
         gardens.compactMap { e in
             guard let m = e.metrics["soilMoisture"] else { return nil }
@@ -81,6 +83,16 @@ public struct GardenView: View {
                 text: insights.first.map { $0.title + ". " + ($0.recommendation ?? "") }
                     ?? "Next watering in \(nextHours > 0 ? "\(nextHours)h" : "now"). PRVIO monitors soil sensors and adjusts schedules automatically.",
                 tint: .domainGarden)
+
+            GlassButton("Analytics", systemImage: "chart.bar.xaxis", tint: .domainGarden) {
+                showAnalytics = true
+            }
+        }
+        .sheet(isPresented: $showAnalytics) {
+            GardenAnalyticsView(twin: twin)
+                .presentationDetents([.large])
+                .presentationBackground(.clear)
+                .presentationDragIndicator(.visible)
         }
     }
 

@@ -23,6 +23,8 @@ public struct AgricultureView: View {
     }
     private var insights: [PrvioInsight] { twin.insights(for: .agriculture) }
 
+    @State private var showAnalytics = false
+
     private var profiles: [AgricultureProfile] {
         fields.compactMap { e in
             if case .agriculture(let a) = e.detail { return a }
@@ -108,6 +110,16 @@ public struct AgricultureView: View {
                     ?? "PRVIO monitors soil, weather and market data to optimise field schedules automatically.",
                     tint: .domainAgriculture)
             }
+
+            GlassButton("Analytics", systemImage: "chart.bar.xaxis", tint: .domainAgriculture) {
+                showAnalytics = true
+            }
+        }
+        .sheet(isPresented: $showAnalytics) {
+            AgricultureAnalyticsView(twin: twin)
+                .presentationDetents([.large])
+                .presentationBackground(.clear)
+                .presentationDragIndicator(.visible)
         }
     }
 

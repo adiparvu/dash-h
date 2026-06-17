@@ -23,6 +23,8 @@ public struct GreenhouseView: View {
     }
     private var insights: [PrvioInsight] { twin.insights(for: .greenhouse) }
 
+    @State private var showAnalytics = false
+
     private var profiles: [GreenhouseProfile] {
         greenhouses.compactMap { e in
             if case .greenhouse(let g) = e.detail { return g }
@@ -99,6 +101,16 @@ public struct GreenhouseView: View {
                     }
                 }
             }
+
+            GlassButton("Analytics", systemImage: "chart.bar.xaxis", tint: .domainGreenhouse) {
+                showAnalytics = true
+            }
+        }
+        .sheet(isPresented: $showAnalytics) {
+            GreenhouseAnalyticsView(twin: twin)
+                .presentationDetents([.large])
+                .presentationBackground(.clear)
+                .presentationDragIndicator(.visible)
         }
     }
 

@@ -27,6 +27,8 @@ public struct PondDetailView: View {
     }
     private var insights: [PrvioInsight] { twin.insights(for: .pond) }
 
+    @State private var showAnalytics = false
+
     public var body: some View {
         AnalyticsScaffold(title: "Pond", tint: .domainPond) {
             if let p = profile, let entity = pondEntity {
@@ -85,6 +87,16 @@ public struct PondDetailView: View {
                     }
                 }
             }
+
+            GlassButton("Analytics", systemImage: "chart.bar.xaxis", tint: .domainPond) {
+                showAnalytics = true
+            }
+        }
+        .sheet(isPresented: $showAnalytics) {
+            PondAnalyticsView(twin: twin)
+                .presentationDetents([.large])
+                .presentationBackground(.clear)
+                .presentationDragIndicator(.visible)
         }
     }
 

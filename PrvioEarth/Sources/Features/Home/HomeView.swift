@@ -37,8 +37,8 @@ public struct HomeView: View {
     private var energyHistory: [EnergyPoint] {
         (0..<24).map { hour in
             let gen = max(0, totalSolarW * sin(Double(hour - 6) * .pi / 12))
-            let load = totalLoadW * Double.random(in: 0.6...1.1)
-            return EnergyPoint(hour: hour, generation: gen, load: load)
+            let loadFraction = 0.75 + 0.35 * abs(sin(Double(hour) * .pi / 11.0))
+            return EnergyPoint(hour: hour, generation: gen, load: totalLoadW * loadFraction)
         }
     }
 
