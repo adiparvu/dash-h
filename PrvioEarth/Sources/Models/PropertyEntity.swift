@@ -141,6 +141,35 @@ public struct PropertyEntity: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
+// MARK: - Primary-metric helper (used by entity list cards and map markers)
+
+public extension PropertyEntity {
+    /// The single most-relevant metric for this entity, formatted for compact display.
+    /// Returns `nil` for entities with no detail and no free metrics.
+    var primaryMetric: (label: String, value: String)? {
+        switch detail {
+        case .tree(let t):
+            return ("height", String(format: "%.1f m", t.heightMeters))
+        case .orchard(let o):
+            return ("yield", String(format: "%.0f kg", o.expectedYieldKg))
+        case .pond(let p):
+            return ("O₂", String(format: "%.1f mg/L", p.dissolvedOxygenMgL))
+        case .garden(let g):
+            return ("moisture", String(format: "%.0f%%", g.soilMoisture * 100))
+        case .greenhouse(let g):
+            return ("temp", String(format: "%.0f°C", g.temperatureC))
+        case .agriculture(let a):
+            return ("stage", a.growthStage.rawValue.capitalized)
+        case .device(let d):
+            return ("status", d.isOnline ? "online" : "offline")
+        case .none:
+            return metrics.sorted(by: { $0.key < $1.key }).first.map { k, v in
+                (k, String(format: "%.1f", v))
+            }
+        }
+    }
+}
+
 // MARK: - Structured Detail Payloads
 
 /// Strongly-typed payloads carried by entities of specific kinds. Kept as a

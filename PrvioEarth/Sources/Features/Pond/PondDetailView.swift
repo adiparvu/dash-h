@@ -90,10 +90,14 @@ public struct PondDetailView: View {
 
     private func healthHistoryCard(entity: PropertyEntity) -> some View {
         ChartCard(title: "Health (14 days)", tint: .domainPond) {
+            let seed = Double(abs(entity.id.hashValue) % 10_000) / 10_000.0
             let points: [TimeSeriesPoint] = (0..<14).map { day in
-                TimeSeriesPoint(
+                let t = Double(day) / 13.0
+                let wave = sin(t * .pi * 2.5 + seed * .pi * 2) * 0.07
+                let v = min(1, max(0, entity.health.score + wave))
+                return TimeSeriesPoint(
                     timestamp: .now.addingTimeInterval(Double(day - 14) * 86_400),
-                    value: min(1, max(0, entity.health.score + Double.random(in: -0.08...0.06))))
+                    value: v)
             }
             Chart(points) { pt in
                 AreaMark(x: .value("Day", pt.timestamp), y: .value("Health", pt.value))

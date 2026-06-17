@@ -31,6 +31,7 @@ public final class DigitalTwinEngine {
 
     private let ai: AIEngine
     private var tickTask: Task<Void, Never>?
+    private var tickCount = 0
 
     public init(anchor: GeoPoint, seed: [PropertyEntity], automations: [Automation], ai: AIEngine = AIEngine()) {
         self.anchor = anchor
@@ -113,6 +114,10 @@ public final class DigitalTwinEngine {
             entities[i].apply(jitter: 0.04)
             entities[i].lastUpdated = .now
         }
+        tickCount += 1
+        // Throttle the expensive AI + snapshot write to every 3rd tick;
+        // health-score drift is still applied on every tick so the map feels live.
+        guard tickCount % 3 == 0 else { return }
         recomputeInsights()
     }
 

@@ -121,11 +121,170 @@ public extension PropertyAnalytics {
         let base = summary.totalLastHarvestKg
         return (0..<months).map { m in
             let t = Double(m) / Double(max(months - 1, 1))
-            // Smooth S-curve from base → target, peaking near harvest.
             let curve = base + (target - base) * (t * t * (3 - 2 * t))
             return TimeSeriesPoint(
                 timestamp: Calendar.current.date(byAdding: .month, value: m, to: start) ?? start,
                 value: curve)
         }
+    }
+
+    // MARK: - Pond
+
+    struct PondSummary: Sendable {
+        public var pondCount: Int
+        public var averagePH: Double
+        public var averageOxygenMgL: Double
+        public var averageTempC: Double
+        public var totalFishCount: Int
+        public var pumpsOnline: Int
+        public var lowOxygenCount: Int    // O₂ < 5 mg/L
+        public var acidicCount: Int       // pH < 6.5
+    }
+
+    static func pond(_ entities: [PropertyEntity]) -> PondSummary {
+        let profiles = entities.compactMap { e -> PondProfile? in
+            if case .pond(let p) = e.detail { return p }; return nil
+        }
+        guard !profiles.isEmpty else {
+            return PondSummary(pondCount: 0, averagePH: 7, averageOxygenMgL: 8,
+                               averageTempC: 18, totalFishCount: 0, pumpsOnline: 0,
+                               lowOxygenCount: 0, acidicCount: 0)
+        }
+        let n = Double(profiles.count)
+        return PondSummary(
+            pondCount: profiles.count,
+            averagePH: profiles.map(\.pH).reduce(0, +) / n,
+            averageOxygenMgL: profiles.map(\.dissolvedOxygenMgL).reduce(0, +) / n,
+            averageTempC: profiles.map(\.waterTempC).reduce(0, +) / n,
+            totalFishCount: profiles.map(\.fishCount).reduce(0, +),
+            pumpsOnline: profiles.map(\.pumpsOnline).reduce(0, +),
+            lowOxygenCount: profiles.filter { $0.dissolvedOxygenMgL < 5 }.count,
+            acidicCount: profiles.filter { $0.pH < 6.5 }.count)
+    }
+
+    // MARK: - Garden
+
+    struct GardenSummary: Sendable {
+        public var bedCount: Int
+        public var totalBeds: Int         // beds across all garden entities
+        public var averageMoisture: Double
+        public var averagePH: Double
+        public var averageSoilTempC: Double
+        public var dryBedCount: Int       // moisture < 0.4
+        public var mulchedCount: Int
+        public var totalCompanionSpecies: Int
+        public var nextWatering: Date?
+    }
+
+    static func garden(_ entities: [PropertyEntity]) -> GardenSummary {
+        let profiles = entities.compactMap { e -> GardenProfile? in
+            if case .garden(let g) = e.detail { return g }; return nil
+        }
+        guard !profiles.isEmpty else {
+            return GardenSummary(bedCount: 0, totalBeds: 0, averageMoisture: 0.5,
+                                 averagePH: 6.8, averageSoilTempC: 18, dryBedCount: 0,
+                                 mulchedCount: 0, totalCompanionSpecies: 0, nextWatering: nil)
+        }
+        let n = Double(profiles.count)
+        let companions = Set(profiles.flatMap(\.companions))
+        return GardenSummary(
+            bedCount: profiles.count,
+            totalBeds: profiles.map(\.beds.count).reduce(0, +),
+            averageMoisture: profiles.map(\.soilMoisture).reduce(0, +) / n,
+            averagePH: profiles.map(\.soilPH).reduce(0, +) / n,
+            averageSoilTempC: profiles.map(\.soilTemperatureC).reduce(0, +) / n,
+            dryBedCount: profiles.filter { $0.soilMoisture < 0.4 }.count,
+            mulchedCount: profiles.filter(\.mulched).count,
+            totalCompanionSpecies: companions.count,
+            nextWatering: profiles.map(\.nextWatering).min())
+    }
+
+    // MARK: - Greenhouse
+
+    struct GreenhouseSummary: Sendable {
+        public var greenhouseCount: Int
+        public var totalZones: Int
+        public var averageTempC: Double
+        public var averageHumidity: Double
+        public var averageCO2Ppm: Double
+        public var averageLightLux: Double
+        public var growLightsOnCount: Int
+        public var ventilationOnCount: Int
+        public var uniqueCrops: [String]
+        public var nextHarvest: Date?
+        public var heatStressCount: Int   // temp > 35°C
+        public var co2SpikeCount: Int     // CO₂ > 1500 ppm
+    }
+
+    static func greenhouse(_ entities: [PropertyEntity]) -> GreenhouseSummary {
+        let profiles = entities.compactMap { e -> GreenhouseProfile? in
+            if case .greenhouse(let g) = e.detail { return g }; return nil
+        }
+        guard !profiles.isEmpty else {
+            return GreenhouseSummary(greenhouseCount: 0, totalZones: 0, averageTempC: 22,
+                                     averageHumidity: 0.65, averageCO2Ppm: 800,
+                                     averageLightLux: 20_000, growLightsOnCount: 0,
+                                     ventilationOnCount: 0, uniqueCrops: [],
+                                     nextHarvest: nil, heatStressCount: 0, co2SpikeCount: 0)
+        }
+        let n = Double(profiles.count)
+        var seen = Set<String>()
+        let crops = profiles.flatMap(\.crops).filter { seen.insert($0).inserted }
+        return GreenhouseSummary(
+            greenhouseCount: profiles.count,
+            totalZones: profiles.map(\.zones).reduce(0, +),
+            averageTempC: profiles.map(\.temperatureC).reduce(0, +) / n,
+            averageHumidity: profiles.map(\.humidity).reduce(0, +) / n,
+            averageCO2Ppm: profiles.map(\.co2Ppm).reduce(0, +) / n,
+            averageLightLux: profiles.map(\.lightLux).reduce(0, +) / n,
+            growLightsOnCount: profiles.filter(\.growLightsOn).count,
+            ventilationOnCount: profiles.filter(\.ventilationOn).count,
+            uniqueCrops: crops,
+            nextHarvest: profiles.compactMap(\.nextHarvest).min(),
+            heatStressCount: profiles.filter { $0.temperatureC > 35 }.count,
+            co2SpikeCount: profiles.filter { $0.co2Ppm > 1500 }.count)
+    }
+
+    // MARK: - Agriculture
+
+    struct AgricultureSummary: Sendable {
+        public var fieldCount: Int
+        public var totalAreaHa: Double
+        public var averageSoilMoisture: Double
+        public var averageYieldForecastTha: Double
+        public var stageCounts: [(stage: String, count: Int)]
+        public var totalNPKkg: (n: Double, p: Double, k: Double)
+        public var droughtStressCount: Int  // moisture < 0.30
+        public var nDeficiencyCount: Int    // N < 60 kg/ha
+        public var projectedTotalTons: Double { totalAreaHa * averageYieldForecastTha }
+    }
+
+    static func agriculture(_ entities: [PropertyEntity]) -> AgricultureSummary {
+        let profiles = entities.compactMap { e -> AgricultureProfile? in
+            if case .agriculture(let a) = e.detail { return a }; return nil
+        }
+        guard !profiles.isEmpty else {
+            return AgricultureSummary(fieldCount: 0, totalAreaHa: 0, averageSoilMoisture: 0.5,
+                                      averageYieldForecastTha: 0, stageCounts: [],
+                                      totalNPKkg: (0, 0, 0), droughtStressCount: 0, nDeficiencyCount: 0)
+        }
+        let n = Double(profiles.count)
+        var stageMap: [String: Int] = [:]
+        var totalN = 0.0, totalP = 0.0, totalK = 0.0
+        for p in profiles {
+            stageMap[p.growthStage.rawValue.capitalized, default: 0] += 1
+            totalN += p.npk.nitrogen * p.fieldAreaHa
+            totalP += p.npk.phosphorus * p.fieldAreaHa
+            totalK += p.npk.potassium * p.fieldAreaHa
+        }
+        return AgricultureSummary(
+            fieldCount: profiles.count,
+            totalAreaHa: profiles.map(\.fieldAreaHa).reduce(0, +),
+            averageSoilMoisture: profiles.map(\.soilMoisture).reduce(0, +) / n,
+            averageYieldForecastTha: profiles.map(\.yieldForecastTha).reduce(0, +) / n,
+            stageCounts: stageMap.map { ($0.key, $0.value) }.sorted { $0.count > $1.count },
+            totalNPKkg: (totalN, totalP, totalK),
+            droughtStressCount: profiles.filter { $0.soilMoisture < 0.30 }.count,
+            nDeficiencyCount: profiles.filter { $0.npk.nitrogen < 60 }.count)
     }
 }

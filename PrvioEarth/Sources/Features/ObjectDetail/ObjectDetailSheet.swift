@@ -172,11 +172,18 @@ public struct ObjectDetailSheet: View {
         }
     }
 
+    /// 14-day health history seeded from the entity's UUID so the sparkline is
+    /// stable across renders — no random jumps each time the sheet opens.
     private func sampleHistory() -> [TimeSeriesPoint] {
-        (0..<14).map { day in
-            TimeSeriesPoint(
+        let seed = Double(abs(entity.id.hashValue) % 10_000) / 10_000.0
+        return (0..<14).map { day in
+            let t = Double(day) / 13.0
+            let wave = sin(t * .pi * 2.5 + seed * .pi * 2) * 0.08
+            let trend = (seed > 0.5 ? -0.01 : 0.01) * Double(14 - day)
+            let v = min(1, max(0, entity.health.score + wave + trend * 0.3))
+            return TimeSeriesPoint(
                 timestamp: .now.addingTimeInterval(Double(day - 14) * 86_400),
-                value: min(1, max(0, entity.health.score + Double.random(in: -0.12...0.08))))
+                value: v)
         }
     }
 
