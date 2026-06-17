@@ -42,6 +42,7 @@ targets:
       - path: Sources/Models
       - path: Sources/Engine
       - path: Sources/Features
+      - path: Sources/Watch
       - path: Sources/App/RootView.swift
       - path: Sources/App/SettingsView.swift
     settings:

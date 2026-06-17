@@ -201,7 +201,6 @@ public final class HomeKitTransport: NSObject, TelemetryTransport, HMHomeManager
         switch typeUUID {
         case HMCharacteristicTypeCurrentTemperature:      return "temp"
         case HMCharacteristicTypeCurrentRelativeHumidity: return "humidity"
-        case HMCharacteristicTypeOn:                      return "power"
         case HMCharacteristicTypeBatteryLevel:            return "battery"
         case HMCharacteristicTypeAirQuality:              return "airQuality"
         case HMCharacteristicTypeCarbonDioxideLevel:      return "co2"
