@@ -9,6 +9,7 @@
 //
 
 import SwiftUI
+import CoreLocation
 import CoreSpotlight
 
 public struct RootView: View {
@@ -17,6 +18,7 @@ public struct RootView: View {
     @State private var vision: VisionEngine
     @State private var mapVM: PropertyMapViewModel
     @State private var intelligenceVM: IntelligenceViewModel
+    @State private var weatherEngine: WeatherEngine
 
     @State private var module: PropertyModule = .map
     @State private var showOnboarding = !UserDefaults.standard.bool(forKey: OnboardingViewModel.key)
@@ -37,11 +39,14 @@ public struct RootView: View {
         let mapVM = PropertyMapViewModel(twin: twin, gis: gis)
         let intel = IntelligenceViewModel(twin: twin)
 
+        let anchor = PropertySeed.anchor
         _twin = State(initialValue: twin)
         _gis = State(initialValue: gis)
         _vision = State(initialValue: VisionEngine())
         _mapVM = State(initialValue: mapVM)
         _intelligenceVM = State(initialValue: intel)
+        _weatherEngine = State(initialValue: WeatherEngine(
+            coordinate: .init(latitude: anchor.latitude, longitude: anchor.longitude)))
     }
 
     public var body: some View {
@@ -66,7 +71,7 @@ public struct RootView: View {
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showSystems) {
-            SystemsHubView(twin: twin, onOpenAutomation: {
+            SystemsHubView(twin: twin, weatherEngine: weatherEngine, onOpenAutomation: {
                 showSystems = false
                 showAutomation = true
             }, onOpenCamera: {
@@ -117,6 +122,7 @@ public struct RootView: View {
             let storedInterval = UserDefaults.standard.double(forKey: "telemetryIntervalSec")
             let seconds = storedInterval > 0 ? storedInterval : 5.0
             twin.startLiveTelemetry(interval: .seconds(seconds))
+            weatherEngine.start()
             intelligenceVM.onHighlight = { ids in
                 mapVM.applyHighlight(ids)
                 withAnimation(.prvioMorph) { module = .map }
@@ -134,7 +140,7 @@ public struct RootView: View {
             }
             #endif
         }
-        .onDisappear { twin.stopLiveTelemetry() }
+        .onDisappear { twin.stopLiveTelemetry(); weatherEngine.stop() }
         .onChange(of: scenePhase) { _, phase in
             if phase == .background { PersistenceStore.shared.save(entities: twin.entities) }
         }

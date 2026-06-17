@@ -13,6 +13,7 @@ import SwiftUI
 
 public struct SystemsHubView: View {
     var twin: DigitalTwinEngine
+    var weatherEngine: WeatherEngine?
     var onOpenAutomation: () -> Void
     var onOpenCamera: () -> Void
     var onOpenDrone: () -> Void
@@ -21,6 +22,7 @@ public struct SystemsHubView: View {
     var onFocusModule: (PropertyModule) -> Void
 
     public init(twin: DigitalTwinEngine,
+                weatherEngine: WeatherEngine? = nil,
                 onOpenAutomation: @escaping () -> Void,
                 onOpenCamera: @escaping () -> Void = {},
                 onOpenDrone: @escaping () -> Void = {},
@@ -28,6 +30,7 @@ public struct SystemsHubView: View {
                 onOpenSettings: @escaping () -> Void = {},
                 onFocusModule: @escaping (PropertyModule) -> Void) {
         self.twin = twin
+        self.weatherEngine = weatherEngine
         self.onOpenAutomation = onOpenAutomation
         self.onOpenCamera = onOpenCamera
         self.onOpenDrone = onOpenDrone
@@ -46,9 +49,13 @@ public struct SystemsHubView: View {
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: Spacing.md),
                                     GridItem(.flexible(), spacing: Spacing.md)], spacing: Spacing.md) {
                     EnergyTile(summary: PropertyAnalytics.energy(entities))
-                    WeatherTile(summary: PropertyAnalytics.weather(entities))
+                    WeatherTile(summary: PropertyAnalytics.weather(entities), engine: weatherEngine)
                     WaterTile(summary: PropertyAnalytics.water(entities))
                     SecurityTile(summary: PropertyAnalytics.security(entities))
+                }
+
+                if let engine = weatherEngine, !engine.forecast.isEmpty {
+                    WeatherForecastStrip(forecast: engine.forecast)
                 }
 
                 Text("Intelligence Tools").font(.prvioHeadline())
@@ -137,14 +144,66 @@ private struct EnergyTile: View {
 
 private struct WeatherTile: View {
     var summary: PropertyAnalytics.WeatherSummary
+    var engine: WeatherEngine?
+
+    private var current: WeatherEngine.Current? { engine?.current }
+    private var displayTemp: Double    { current?.tempC       ?? summary.tempC }
+    private var displayCond: String    { current?.condition   ?? summary.condition }
+    private var displayWind: Double    { current?.windKph     ?? summary.windKph }
+    private var displaySymbol: String  { current?.symbolName  ?? summary.symbol }
+
     var body: some View {
-        SystemTile(title: "Weather", icon: summary.symbol, tint: .domainWater) {
+        SystemTile(title: "Weather", icon: displaySymbol, tint: .domainWater) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("\(Int(summary.tempC))°").font(.prvioMetric())
-                Text("\(summary.condition) • \(Int(summary.windKph)) kph")
+                Text("\(Int(displayTemp))°").font(.prvioMetric())
+                Text("\(displayCond) · \(Int(displayWind)) kph")
                     .font(.prvioCaption()).foregroundStyle(.secondary)
+                if let c = current {
+                    Label("UV \(c.uvIndex) · \(Int(c.humidity * 100))% RH",
+                          systemImage: c.isDaytime ? "sun.max.fill" : "moon.fill")
+                        .font(.prvioCaption()).foregroundStyle(.secondary)
+                }
             }
         }
+    }
+}
+
+private struct WeatherForecastStrip: View {
+    var forecast: [WeatherEngine.DayForecast]
+    var body: some View {
+        GlassCard(tint: .domainWater) {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                Text("7-Day Forecast").font(.prvioCaption()).foregroundStyle(.secondary)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: Spacing.md) {
+                        ForEach(forecast) { day in
+                            ForecastDayCell(day: day)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct ForecastDayCell: View {
+    var day: WeatherEngine.DayForecast
+    var body: some View {
+        VStack(spacing: 3) {
+            Text(day.date, format: .dateTime.weekday(.abbreviated))
+                .font(.system(size: 9)).foregroundStyle(.secondary)
+            Image(systemName: day.symbolName)
+                .font(.caption).foregroundStyle(.domainWater)
+            Text("\(Int(day.highC))°")
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+            Text("\(Int(day.lowC))°")
+                .font(.system(size: 9, design: .rounded)).foregroundStyle(.secondary)
+            if day.precipProbability > 0.2 {
+                Text("\(Int(day.precipProbability * 100))%")
+                    .font(.system(size: 8)).foregroundStyle(.domainWater)
+            }
+        }
+        .frame(width: 44)
     }
 }
 

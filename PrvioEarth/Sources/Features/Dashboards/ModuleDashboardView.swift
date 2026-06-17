@@ -58,7 +58,7 @@ public struct ModuleDashboardView: View {
             Group {
                 switch module {
                 case .forest: ForestAnalyticsView(twin: twin)
-                case .orchard: OrchardAnalyticsView(twin: twin)
+                case .orchard: OrchardView(twin: twin)
                 case .pond: PondDetailView(twin: twin)
                 case .garden: GardenView(twin: twin)
                 case .greenhouse: GreenhouseView(twin: twin)
