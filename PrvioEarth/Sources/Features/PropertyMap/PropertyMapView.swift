@@ -51,6 +51,13 @@ public struct PropertyMapView: View {
 
     private var mapLayer: some View {
         Map(position: Binding(get: { vm.gis.cameraPosition }, set: { vm.gis.cameraPosition = $0 })) {
+            // Module zone outlines rendered beneath entity annotations
+            ForEach(vm.zonePolygonData) { zone in
+                MapPolygon(coordinates: zone.coordinates)
+                    .foregroundStyle(zone.tint.opacity(0.12))
+                    .stroke(zone.tint.opacity(0.55), lineWidth: 2)
+            }
+
             ForEach(vm.visibleEntities) { entity in
                 Annotation(entity.name, coordinate: entity.location.coordinate) {
                     EntityMarker(

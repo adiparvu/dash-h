@@ -2,12 +2,9 @@
 //  PropertyWidgets.swift
 //  PRVIO EARTH — Widget Extension
 //
-//  WidgetKit surface for the Home Screen, Lock Screen and StandBy. Shares
-//  the same models/engines as the app via a read-only twin snapshot
-//  written to the App Group. Glanceable, object-centric, Liquid Glass.
-//
-//  NOTE: This belongs to a Widget Extension target; the timeline provider
-//  reads a lightweight snapshot rather than the full live engine.
+//  WidgetKit surface for the Home Screen, Lock Screen, StandBy and Watch
+//  face complications. Shares models via the App Group snapshot written by
+//  the live engine.  Glanceable, object-centric, Liquid Glass.
 //
 
 import WidgetKit
@@ -34,13 +31,30 @@ struct PropertyProvider: TimelineProvider {
     }
 }
 
-// MARK: - Widget View
+// MARK: - Widget Views
 
 struct PropertyWidgetView: View {
     var entry: PropertyEntry
     @Environment(\.widgetFamily) var family
 
     var body: some View {
+        switch family {
+        case .accessoryCircular:
+            accessoryCircularBody
+        case .accessoryInline:
+            accessoryInlineBody
+        case .systemExtraLarge:
+            extraLargeBody
+        case .systemLarge:
+            largeBody
+        default:
+            regularBody
+        }
+    }
+
+    // MARK: Home Screen — small/medium
+
+    private var regularBody: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Image(systemName: "globe.americas.fill").foregroundStyle(.prvioHorizon)
@@ -67,7 +81,109 @@ struct PropertyWidgetView: View {
         .padding(12)
         .containerBackground(Color.prvioDeep.gradient, for: .widget)
     }
+
+    // MARK: Home Screen — large
+
+    private var largeBody: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("PRVIO EARTH", systemImage: "globe.americas.fill")
+                .font(.prvioCaption()).foregroundStyle(.prvioHorizon)
+
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text("\(Int(entry.snapshot.propertyHealth * 100))").font(.prvioMetric())
+                Text("% health").font(.prvioCaption()).foregroundStyle(.secondary)
+            }
+
+            Text(entry.snapshot.topInsight)
+                .font(.prvioLabel()).foregroundStyle(.secondary).lineLimit(4)
+
+            Spacer()
+
+            HStack(spacing: 16) {
+                metricPill("\(String(format: "%.1f", entry.snapshot.energyKwh)) kWh",
+                           icon: "bolt.fill", tint: .domainEnergy)
+                if entry.snapshot.alerts > 0 {
+                    metricPill("\(entry.snapshot.alerts) alerts",
+                               icon: "exclamationmark.triangle.fill", tint: .healthCritical)
+                }
+            }
+
+            Text(entry.date, style: .time)
+                .font(.prvioCaption()).foregroundStyle(.tertiary)
+        }
+        .padding(16)
+        .containerBackground(Color.prvioDeep.gradient, for: .widget)
+    }
+
+    // MARK: StandBy / systemExtraLarge
+
+    private var extraLargeBody: some View {
+        HStack(alignment: .top, spacing: 32) {
+            VStack(alignment: .leading, spacing: 12) {
+                Label("PRVIO EARTH", systemImage: "globe.americas.fill")
+                    .font(.prvioCaption()).foregroundStyle(.prvioHorizon)
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text("\(Int(entry.snapshot.propertyHealth * 100))").font(.prvioMetric())
+                    Text("% healthy").font(.prvioHeadline()).foregroundStyle(.secondary)
+                }
+                Text(entry.snapshot.topInsight)
+                    .font(.prvioLabel()).foregroundStyle(.secondary).lineLimit(4)
+                Spacer()
+                Text("Updated \(entry.date, style: .time)")
+                    .font(.prvioCaption()).foregroundStyle(.tertiary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            VStack(alignment: .leading, spacing: 16) {
+                metricPill("\(String(format: "%.1f", entry.snapshot.energyKwh)) kWh",
+                           icon: "bolt.fill", tint: .domainEnergy)
+                if entry.snapshot.alerts > 0 {
+                    metricPill("\(entry.snapshot.alerts) active alerts",
+                               icon: "exclamationmark.triangle.fill", tint: .healthCritical)
+                } else {
+                    metricPill("No alerts", icon: "checkmark.circle.fill", tint: .healthThriving)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(20)
+        .containerBackground(Color.prvioDeep.gradient, for: .widget)
+    }
+
+    // MARK: Lock Screen / accessoryCircular
+
+    private var accessoryCircularBody: some View {
+        Gauge(value: entry.snapshot.propertyHealth, in: 0...1) {
+            Image(systemName: "globe.americas.fill").foregroundStyle(.prvioHorizon)
+        } currentValueLabel: {
+            Text("\(Int(entry.snapshot.propertyHealth * 100))")
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+        }
+        .gaugeStyle(.accessoryCircularCapacity)
+        .tint(.prvioHorizon)
+    }
+
+    // MARK: Lock Screen / accessoryInline
+
+    private var accessoryInlineBody: some View {
+        let alertSuffix = entry.snapshot.alerts > 0 ? " · \(entry.snapshot.alerts)!" : ""
+        return Label(
+            "\(Int(entry.snapshot.propertyHealth * 100))%\(alertSuffix)",
+            systemImage: "globe.americas.fill")
+    }
+
+    // MARK: Helpers
+
+    private func metricPill(_ text: String, icon: String, tint: Color) -> some View {
+        Label(text, systemImage: icon)
+            .font(.prvioLabel())
+            .foregroundStyle(tint)
+            .padding(.horizontal, 12).padding(.vertical, 8)
+            .background(.ultraThinMaterial, in: Capsule())
+    }
 }
+
+// MARK: - Widget Configuration
 
 struct PropertyWidget: Widget {
     let kind = "PropertyWidget"
@@ -77,6 +193,9 @@ struct PropertyWidget: Widget {
         }
         .configurationDisplayName("Property Health")
         .description("Live health, alerts and energy from your Digital Twin.")
-        .supportedFamilies([.systemSmall, .systemMedium, .accessoryRectangular])
+        .supportedFamilies([
+            .systemSmall, .systemMedium, .systemLarge, .systemExtraLarge,
+            .accessoryCircular, .accessoryInline, .accessoryRectangular,
+        ])
     }
 }

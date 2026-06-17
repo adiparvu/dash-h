@@ -132,6 +132,17 @@ public struct RootView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .background { PersistenceStore.shared.save(entities: twin.entities) }
         }
+        .userActivity("com.prvio.earth.module") { activity in
+            activity.title = module == .map ? "Digital Twin" : module.title
+            activity.userInfo = ["module": module.rawValue]
+            activity.isEligibleForHandoff = true
+            activity.isEligibleForSearch = false
+        }
+        .onContinueUserActivity("com.prvio.earth.module") { activity in
+            guard let raw = activity.userInfo?["module"] as? String,
+                  let m = PropertyModule(rawValue: raw) else { return }
+            withAnimation(.prvioMorph) { module = m }
+        }
         .preferredColorScheme(.dark)
     }
 

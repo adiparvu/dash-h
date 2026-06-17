@@ -50,9 +50,55 @@ public final class PropertyEditorViewModel {
             kind: draftKind,
             location: GeoPoint(latitude: coord.latitude, longitude: coord.longitude),
             health: HealthState(score: 0.9),
-            metrics: [:])
+            metrics: [:],
+            detail: defaultDetail(for: draftKind))
         twin.addEntity(entity)
         withAnimation(.prvioMorph) { pendingCoordinate = nil }
+    }
+
+    // swiftlint:disable:next cyclomatic_complexity
+    private func defaultDetail(for kind: EntityKind) -> EntityDetail? {
+        let week: TimeInterval = 7 * 86_400
+        switch kind {
+        case .tree:
+            return .tree(TreeProfile(species: "Unknown", ageYears: 5, heightMeters: 6,
+                                     trunkDiameterCm: 18, growthRateCmPerYear: 30,
+                                     carbonStorageKg: 40, biomassKg: 120, soilMoisture: 0.5, soilPH: 6.5))
+        case .fruitTree, .beehive:
+            return .orchard(OrchardProfile(species: "Unknown", phenophase: .budding,
+                                           expectedYieldKg: 30, lastHarvestKg: 28,
+                                           nextHarvest: .now.addingTimeInterval(120 * 86_400),
+                                           irrigationActive: false,
+                                           nextFertilization: .now.addingTimeInterval(week),
+                                           nextPruning: .now.addingTimeInterval(4 * week)))
+        case .pond, .pump, .filter, .aerator:
+            return .pond(PondProfile(waterTempC: 18, pH: 7.2, dissolvedOxygenMgL: 8.5,
+                                     ammoniaMgL: 0.1, nitrateMgL: 10, waterLevelPercent: 85,
+                                     fishCount: 20, pumpsOnline: 1, uvSterilizerOn: true))
+        case .garden, .soilSensor:
+            return .garden(GardenProfile(
+                beds: ["Bed A", "Bed B"],
+                soilMoisture: 0.55, soilPH: 6.8, soilTemperatureC: 20,
+                lastWatered: .now, nextWatering: .now.addingTimeInterval(2 * 86_400),
+                sunHoursPerDay: 7, mulched: false, companions: []))
+        case .greenhouse, .growLight, .crop:
+            return .greenhouse(GreenhouseProfile(
+                temperatureC: 22, humidity: 0.65, co2Ppm: 800, lightLux: 20_000,
+                growLightsOn: false, ventilationOn: true, zones: 2,
+                crops: ["Tomato", "Basil"]))
+        case .cropZone, .irrigationPivot:
+            return .agriculture(AgricultureProfile(
+                cropType: "Unknown", fieldAreaHa: 1.0, soilType: "Loam",
+                growthStage: .seedling,
+                npk: AgricultureProfile.NPKProfile(nitrogen: 80, phosphorus: 40, potassium: 60),
+                soilMoisture: 0.5,
+                plantingDate: .now,
+                expectedHarvest: .now.addingTimeInterval(90 * 86_400),
+                irrigationEfficiency: 0.75, yieldForecastTha: 3.0))
+        case .camera, .sensor, .solarPanel, .weatherStation, .house, .building,
+             .gate, .irrigationValve, .equipment, .pathway, .fence:
+            return .device(DeviceProfile(protocolType: .wifi, isOnline: true, isOn: true, firmware: "1.0.0"))
+        }
     }
 
     public func remove(_ entity: PropertyEntity) {
@@ -68,7 +114,8 @@ public final class PropertyEditorViewModel {
     public let palette: [EntityKind] = [
         .tree, .fruitTree, .pond, .greenhouse, .garden,
         .house, .building, .camera, .sensor, .pump,
-        .irrigationValve, .solarPanel, .weatherStation, .gate
+        .irrigationValve, .solarPanel, .weatherStation, .gate,
+        .cropZone, .irrigationPivot,
     ]
 }
 

@@ -8,6 +8,7 @@
 //
 
 import SwiftUI
+import MapKit
 
 @MainActor
 @Observable
@@ -36,6 +37,21 @@ public final class PropertyMapViewModel {
 
     public var visibleEntities: [PropertyEntity] {
         twin.entities(in: activeModule)
+    }
+
+    /// One convex-hull polygon per module, computed from the live entity set.
+    /// Modules with fewer than 3 entities are omitted (no polygon possible).
+    public var zonePolygonData: [GISEngine.ZonePolygonData] {
+        PropertyModule.allCases
+            .filter { $0 != .map && $0 != .intelligence }
+            .compactMap { mod in
+                let coords = twin.entities
+                    .filter { $0.kind.module == mod }
+                    .map { $0.location.coordinate }
+                guard coords.count >= 3 else { return nil }
+                let hull = GISEngine.expandedHull(coords)
+                return GISEngine.ZonePolygonData(id: mod, coordinates: hull, tint: mod.tint)
+            }
     }
 
     public func select(_ entity: PropertyEntity) {
