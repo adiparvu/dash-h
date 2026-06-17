@@ -36,7 +36,8 @@ public final class PersistenceStore {
     public static let shared = PersistenceStore()
 
     private let container: ModelContainer
-    private var context: ModelContext { container.mainContext }
+    // mainContext is @MainActor-isolated; callers are always on the main thread via SwiftUI.
+    private var context: ModelContext { MainActor.assumeIsolated { container.mainContext } }
 
     private init() {
         // CloudKit-backed container — requires iCloud entitlements in production.
