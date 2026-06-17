@@ -42,7 +42,8 @@ targets:
       - path: Sources/Models
       - path: Sources/Engine
       - path: Sources/Features
-      - path: Sources/App/RootView.swift   # app shell lives in Core; only @main is in the app target
+      - path: Sources/App/RootView.swift
+      - path: Sources/App/SettingsView.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.prvio.earth.core
