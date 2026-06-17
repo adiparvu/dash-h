@@ -12,6 +12,10 @@ import PrvioEarthCore   // Xcode: RootView and the engines live in the shared fr
 
 @main
 struct PrvioEarthApp: App {
+    init() {
+        BackgroundTaskEngine.registerHandlers()
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()

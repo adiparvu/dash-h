@@ -123,6 +123,8 @@ public struct RootView: View {
             let seconds = storedInterval > 0 ? storedInterval : 5.0
             twin.startLiveTelemetry(interval: .seconds(seconds))
             weatherEngine.start()
+            BackgroundTaskEngine.shared.scheduleAppRefresh()
+            BackgroundTaskEngine.shared.scheduleProcessing()
             intelligenceVM.onHighlight = { ids in
                 mapVM.applyHighlight(ids)
                 withAnimation(.prvioMorph) { module = .map }

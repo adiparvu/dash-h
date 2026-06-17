@@ -19,7 +19,13 @@ public enum SpotlightBridge {
             let attrs = CSSearchableItemAttributeSet(contentType: .item)
             attrs.title = entity.name
             attrs.contentDescription = "\(entity.kind.module.rawValue.capitalized) · Health \(Int(entity.health.score * 100))%"
-            attrs.keywords = [entity.kind.rawValue, entity.kind.module.rawValue, "PRVIO", "digital twin"]
+            attrs.keywords = [entity.kind.rawValue, entity.kind.module.rawValue, "PRVIO", "digital twin",
+                              entity.health.status.rawValue]
+            attrs.latitude  = NSNumber(value: entity.location.latitude)
+            attrs.longitude = NSNumber(value: entity.location.longitude)
+            attrs.namedLocation = entity.kind.module.rawValue.capitalized
+            // Deep-link: RootView handles CSSearchableItemActionType via the uniqueIdentifier
+            attrs.url = URL(string: "prvio://entity/\(entity.id.uuidString)")
             return CSSearchableItem(
                 uniqueIdentifier: entity.id.uuidString,
                 domainIdentifier: domainIdentifier,
