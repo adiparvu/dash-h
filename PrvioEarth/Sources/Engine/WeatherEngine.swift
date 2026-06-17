@@ -21,7 +21,7 @@ public final class WeatherEngine {
 
     // MARK: - Exported types
 
-    public struct Current: Sendable {
+    public struct Current: Sendable, Equatable {
         public var tempC: Double
         public var feelsLikeC: Double
         public var humidity: Double        // 0...1
