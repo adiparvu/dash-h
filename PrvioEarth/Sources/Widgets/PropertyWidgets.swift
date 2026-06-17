@@ -41,6 +41,8 @@ struct PropertyWidgetView: View {
         switch family {
         case .accessoryCircular:
             accessoryCircularBody
+        case .accessoryRectangular:
+            accessoryRectangularBody
         case .accessoryInline:
             accessoryInlineBody
         case .systemExtraLarge:
@@ -161,6 +163,29 @@ struct PropertyWidgetView: View {
         }
         .padding(20)
         .containerBackground(Color.prvioDeep.gradient, for: .widget)
+    }
+
+    // MARK: Watch Face / Lock Screen — accessoryRectangular
+
+    private var accessoryRectangularBody: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Label {
+                Text("\(Int(entry.snapshot.propertyHealth * 100))% healthy")
+                    .font(.headline.weight(.semibold))
+            } icon: {
+                Image(systemName: "globe.americas.fill").foregroundStyle(.prvioHorizon)
+            }
+            Text(entry.snapshot.topInsight)
+                .font(.caption2).foregroundStyle(.secondary).lineLimit(2)
+            HStack(spacing: 6) {
+                if entry.snapshot.alerts > 0 {
+                    Label("\(entry.snapshot.alerts)", systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption2).foregroundStyle(.red)
+                }
+                Label(String(format: "%.1f kWh", entry.snapshot.energyKwh), systemImage: "bolt.fill")
+                    .font(.caption2).foregroundStyle(.yellow)
+            }
+        }
     }
 
     // MARK: Lock Screen / accessoryCircular

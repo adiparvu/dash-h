@@ -129,3 +129,84 @@ public struct SimulatedTransport: TelemetryTransport {
         }
     }
 }
+
+// MARK: - HomeKit / Matter Transport
+
+#if os(iOS)
+import HomeKit
+
+/// Bridges HomeKit and Matter accessories into TelemetryFrames. Each
+/// accessory's characteristics are read when HomeKit homes load and
+/// notification updates are enabled so readings flow without polling.
+/// The entity map ties HomeKit accessory names to DigitalTwinEngine UUIDs;
+/// in production this mapping is persisted in the App Group and editable
+/// via PropertyEditorView.
+public final class HomeKitTransport: NSObject, TelemetryTransport, HMHomeManagerDelegate,
+                                     @unchecked Sendable {
+    public let name = "HomeKit"
+
+    private let homeManager = HMHomeManager()
+    private let entityMap: [String: UUID]   // accessory.name → entity UUID
+    private var continuation: AsyncStream<TelemetryFrame>.Continuation?
+
+    public init(entityMap: [String: UUID]) {
+        self.entityMap = entityMap
+        super.init()
+        homeManager.delegate = self
+    }
+
+    public func stream() -> AsyncStream<TelemetryFrame> {
+        AsyncStream { [weak self] cont in
+            self?.continuation = cont
+            cont.onTermination = { [weak self] _ in self?.continuation = nil }
+        }
+    }
+
+    // MARK: HMHomeManagerDelegate
+
+    public func homeManagerDidUpdateHomes(_ manager: HMHomeManager) {
+        for home in manager.homes {
+            for accessory in home.accessories {
+                guard let entityID = entityMap[accessory.name] else { continue }
+                emitFrame(for: accessory, entityID: entityID)
+                enableNotifications(for: accessory)
+            }
+        }
+    }
+
+    private func emitFrame(for accessory: HMAccessory, entityID: UUID) {
+        var metrics: [String: Double] = [:]
+        for service in accessory.services {
+            for characteristic in service.characteristics {
+                guard let key = Self.metricKey(for: characteristic.characteristicType),
+                      let number = characteristic.value as? NSNumber else { continue }
+                metrics[key] = number.doubleValue
+            }
+        }
+        guard !metrics.isEmpty else { return }
+        continuation?.yield(TelemetryFrame(entityID: entityID, metrics: metrics))
+    }
+
+    private func enableNotifications(for accessory: HMAccessory) {
+        for service in accessory.services {
+            for characteristic in service.characteristics {
+                guard Self.metricKey(for: characteristic.characteristicType) != nil else { continue }
+                characteristic.enableNotification(true) { _ in }
+            }
+        }
+    }
+
+    /// Maps HomeKit / Matter characteristic type UUIDs to PRVIO metric keys.
+    private static func metricKey(for typeUUID: String) -> String? {
+        switch typeUUID {
+        case HMCharacteristicTypeCurrentTemperature:      return "temp"
+        case HMCharacteristicTypeCurrentRelativeHumidity: return "humidity"
+        case HMCharacteristicTypeOn:                      return "power"
+        case HMCharacteristicTypeBatteryLevel:            return "battery"
+        case HMCharacteristicTypeAirQuality:              return "airQuality"
+        case HMCharacteristicTypeCarbonDioxideLevel:      return "co2"
+        default:                                           return nil
+        }
+    }
+}
+#endif

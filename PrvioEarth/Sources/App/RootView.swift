@@ -128,6 +128,11 @@ public struct RootView: View {
         }
         .onChange(of: twin.insights) { _, insights in
             NotificationEngine.shared.schedule(insights)
+            #if canImport(WatchConnectivity) && os(iOS)
+            if let snap = TwinSnapshotBridge.load() {
+                WatchSessionBridge.shared.send(snap)
+            }
+            #endif
         }
         .onDisappear { twin.stopLiveTelemetry() }
         .onChange(of: scenePhase) { _, phase in
