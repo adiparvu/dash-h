@@ -126,11 +126,18 @@ public final class DigitalTwinEngine {
     private func pushSnapshot() {
         let total = entities.isEmpty ? 1.0 : entities.map(\.health.score).reduce(0, +) / Double(entities.count)
         let energy = entities.compactMap { $0.metrics["energyKwh"] }.reduce(0, +)
+
+        var modHealth: [String: Double] = [:]
+        for mod in PropertyModule.allCases where mod != .map && mod != .intelligence {
+            modHealth[mod.rawValue] = averageHealth(for: mod)
+        }
+
         let snap = TwinSnapshot(
             propertyHealth: total,
             alerts: insights.filter { $0.severity == .critical }.count,
             topInsight: insights.first?.title ?? "All systems healthy",
-            energyKwh: energy)
+            energyKwh: energy,
+            moduleHealth: modHealth)
         TwinSnapshotBridge.save(snap)
     }
 }

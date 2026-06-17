@@ -39,6 +39,15 @@ public struct PropertyMapView: View {
         .onChange(of: module) { _, new in
             withAnimation(.prvioMorph) { vm.activeModule = new }
         }
+        .userActivity("com.prvio.earth.entity", isActive: vm.selectedEntity != nil) { activity in
+            guard let entity = vm.selectedEntity else { return }
+            activity.title = entity.name
+            activity.userInfo = [
+                "entityID": entity.id.uuidString,
+                "module": entity.kind.module.rawValue,
+            ]
+            activity.isEligibleForHandoff = true
+        }
         .sheet(item: Binding(get: { vm.selectedEntity }, set: { if $0 == nil { vm.dismissSelection() } })) { entity in
             ObjectDetailSheet(entity: vm.live(entity), twin: vm.twin)
                 .presentationDetents([.fraction(0.45), .large])

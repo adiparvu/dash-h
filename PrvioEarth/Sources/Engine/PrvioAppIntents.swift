@@ -69,6 +69,24 @@ public struct ModuleSummaryIntent: AppIntent {
     }
 }
 
+// MARK: - Entity Focus
+
+public struct EntityFocusIntent: AppIntent {
+    public static let title: LocalizedStringResource = "Go to Entity"
+    public static let description = IntentDescription(
+        "Open the Digital Twin and navigate to a named entity on the property.")
+    public static var openAppWhenRun: Bool = true
+
+    @Parameter(title: "Entity") public var entityName: String
+
+    public init() {}
+    public init(entityName: String) { self.entityName = entityName }
+
+    public func perform() async throws -> some IntentResult & ProvidesDialog {
+        return .result(dialog: IntentDialog("Opening \(entityName) on your Digital Twin."))
+    }
+}
+
 // MARK: - Shortcuts Provider
 
 public struct PrvioShortcutsProvider: AppShortcutsProvider {
@@ -92,5 +110,14 @@ public struct PrvioShortcutsProvider: AppShortcutsProvider {
             ],
             shortTitle: "Module Status",
             systemImageName: "chart.bar.xaxis")
+
+        AppShortcut(
+            intent: EntityFocusIntent(),
+            phrases: [
+                "Show my \(\.$entityName) in \(.applicationName)",
+                "\(.applicationName) go to \(\.$entityName)",
+            ],
+            shortTitle: "Go to Entity",
+            systemImageName: "mappin.circle.fill")
     }
 }

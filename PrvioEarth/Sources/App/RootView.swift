@@ -9,6 +9,7 @@
 //
 
 import SwiftUI
+import CoreSpotlight
 
 public struct RootView: View {
     @State private var twin: DigitalTwinEngine
@@ -143,10 +144,32 @@ public struct RootView: View {
                   let m = PropertyModule(rawValue: raw) else { return }
             withAnimation(.prvioMorph) { module = m }
         }
+        .onContinueUserActivity(CSSearchableItemActionType) { activity in
+            guard let idStr = activity.userInfo?[CSSearchableItemActivityIdentifier] as? String,
+                  let uuid = UUID(uuidString: idStr),
+                  let entity = twin.entity(uuid) else { return }
+            focusEntity(entity)
+        }
+        .onContinueUserActivity("com.prvio.earth.entity") { activity in
+            guard let idStr = activity.userInfo?["entityID"] as? String,
+                  let uuid = UUID(uuidString: idStr),
+                  let entity = twin.entity(uuid) else { return }
+            focusEntity(entity)
+        }
         .preferredColorScheme(.dark)
     }
 
     @Environment(\.scenePhase) private var scenePhase
+
+    /// Navigate to the module that owns `entity`, then open its detail sheet.
+    /// A short sleep lets the module transition animate before the sheet opens.
+    private func focusEntity(_ entity: PropertyEntity) {
+        withAnimation(.prvioMorph) { module = entity.kind.module }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(350))
+            mapVM.select(entity)
+        }
+    }
 
     @ViewBuilder
     private var overlayContent: some View {

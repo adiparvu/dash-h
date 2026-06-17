@@ -117,8 +117,11 @@ struct PropertyWidgetView: View {
 
     // MARK: StandBy / systemExtraLarge
 
+    private static let standByModules = ["forest", "orchard", "pond", "home", "agriculture"]
+
     private var extraLargeBody: some View {
         HStack(alignment: .top, spacing: 32) {
+            // Left: overall health + top insight
             VStack(alignment: .leading, spacing: 12) {
                 Label("PRVIO EARTH", systemImage: "globe.americas.fill")
                     .font(.prvioCaption()).foregroundStyle(.prvioHorizon)
@@ -134,15 +137,25 @@ struct PropertyWidgetView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            VStack(alignment: .leading, spacing: 16) {
-                metricPill("\(String(format: "%.1f", entry.snapshot.energyKwh)) kWh",
-                           icon: "bolt.fill", tint: .domainEnergy)
-                if entry.snapshot.alerts > 0 {
-                    metricPill("\(entry.snapshot.alerts) active alerts",
-                               icon: "exclamationmark.triangle.fill", tint: .healthCritical)
-                } else {
-                    metricPill("No alerts", icon: "checkmark.circle.fill", tint: .healthThriving)
+            // Right: per-module health breakdown
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Modules").font(.prvioCaption()).foregroundStyle(.secondary)
+                ForEach(Self.standByModules, id: \.self) { key in
+                    let score = entry.snapshot.moduleHealth[key] ?? 1
+                    HStack(spacing: 10) {
+                        Text(key.capitalized)
+                            .font(.prvioCaption())
+                            .foregroundStyle(.secondary)
+                            .frame(width: 68, alignment: .leading)
+                        Text("\(Int(score * 100))%")
+                            .font(.system(.caption, design: .rounded).weight(.semibold))
+                            .foregroundStyle(score.healthColor)
+                    }
                 }
+                Spacer(minLength: 0)
+                metricPill(
+                    "\(String(format: "%.1f", entry.snapshot.energyKwh)) kWh",
+                    icon: "bolt.fill", tint: .domainEnergy)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }

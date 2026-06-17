@@ -18,19 +18,40 @@ public struct TwinSnapshot: Codable, Sendable {
     public var topInsight: String
     public var energyKwh: Double
     public var capturedAt: Date
+    /// Per-module health keyed by `PropertyModule.rawValue`. Written by the
+    /// engine on every insight recompute; older snapshots decode with `[:]`.
+    public var moduleHealth: [String: Double]
 
     public init(propertyHealth: Double, alerts: Int, topInsight: String,
-                energyKwh: Double, capturedAt: Date = .now) {
+                energyKwh: Double, capturedAt: Date = .now,
+                moduleHealth: [String: Double] = [:]) {
         self.propertyHealth = propertyHealth
         self.alerts = alerts
         self.topInsight = topInsight
         self.energyKwh = energyKwh
         self.capturedAt = capturedAt
+        self.moduleHealth = moduleHealth
+    }
+
+    // Backward-compatible decoder: snapshots persisted before moduleHealth
+    // was added will decode with an empty dict rather than throwing.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        propertyHealth = try c.decode(Double.self, forKey: .propertyHealth)
+        alerts         = try c.decode(Int.self, forKey: .alerts)
+        topInsight     = try c.decode(String.self, forKey: .topInsight)
+        energyKwh      = try c.decode(Double.self, forKey: .energyKwh)
+        capturedAt     = (try? c.decode(Date.self, forKey: .capturedAt)) ?? .now
+        moduleHealth   = (try? c.decode([String: Double].self, forKey: .moduleHealth)) ?? [:]
     }
 
     public static let placeholder = TwinSnapshot(
         propertyHealth: 0.86, alerts: 2,
-        topInsight: "Orchard soil moisture low", energyKwh: 32.6)
+        topInsight: "Orchard soil moisture low", energyKwh: 32.6,
+        moduleHealth: [
+            "forest": 0.90, "orchard": 0.75, "pond": 0.88,
+            "garden": 0.82, "greenhouse": 0.91, "home": 0.95, "agriculture": 0.78,
+        ])
 }
 
 // MARK: - Bridge (App Group UserDefaults)
