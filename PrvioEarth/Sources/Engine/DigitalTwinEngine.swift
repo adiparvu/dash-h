@@ -158,7 +158,6 @@ public final class DigitalTwinEngine {
             moduleHealth: modHealth)
         TwinSnapshotBridge.save(snap)
     }
-}
 
     // MARK: - Automation trigger evaluation
 
@@ -219,6 +218,7 @@ public final class DigitalTwinEngine {
         return entities.filter { $0.kind.module == automation.module }
                        .contains { $0.health.score < 0.55 }
     }
+}
 
 // MARK: - Telemetry jitter helper
 
