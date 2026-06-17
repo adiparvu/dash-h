@@ -139,11 +139,6 @@ public struct ModuleDashboardView: View {
                 EntityCell(entity: entity, tint: module.tint) { onSelectEntity(entity) }
             }
         }
-        .accessibilityRotor("Entities") {
-            ForEach(entities) { entity in
-                AccessibilityRotorEntry(entity.name)
-            }
-        }
     }
 }
 

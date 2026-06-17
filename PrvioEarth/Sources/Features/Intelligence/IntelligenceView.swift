@@ -25,12 +25,28 @@ public final class IntelligenceViewModel {
 
     public init(twin: DigitalTwinEngine) { self.twin = twin }
 
-    public let suggestions = [
-        "Show stressed trees",
-        "Why are my apple trees producing less fruit?",
-        "Predict pond health for next week",
-        "Create irrigation automation"
-    ]
+    /// Context-aware suggestion chips — lead with insight-driven prompts, fallback to evergreens.
+    public var dynamicSuggestions: [String] {
+        var chips: [String] = []
+        let live = twin.insights
+        if live.contains(where: { $0.module == .pond && $0.severity >= .warning }) { chips.append("What's wrong with the pond?") }
+        if live.contains(where: { $0.module == .forest && $0.severity >= .warning }) { chips.append("Show stressed trees") }
+        if live.contains(where: { $0.module == .greenhouse }) { chips.append("Greenhouse status") }
+        if live.contains(where: { $0.module == .agriculture && $0.severity >= .warning }) { chips.append("Check field health") }
+        let fallback = ["Energy overview", "Predict pond health", "Why less apple fruit?", "Create irrigation automation"]
+        for f in fallback where chips.count < 4 { chips.append(f) }
+        return Array(chips.prefix(4))
+    }
+
+    public var entityNameMap: [UUID: String] {
+        Dictionary(uniqueKeysWithValues: twin.entities.map { ($0.id, $0.name) })
+    }
+
+    public func clearChat() {
+        let greeting = AssistantMessage(role: .prvio,
+            text: "Hello — I'm PRVIO Intelligence. Ask me anything about your property. Try \"Show stressed trees\" or \"Predict pond health for next week.\"")
+        withAnimation(.prvioMorph) { messages = [greeting] }
+    }
 
     public func send(_ text: String? = nil) {
         let content = (text ?? draft).trimmingCharacters(in: .whitespaces)
@@ -55,7 +71,7 @@ public struct IntelligenceView: View {
                 ScrollView {
                     LazyVStack(spacing: Spacing.md) {
                         ForEach(vm.messages) { msg in
-                            MessageBubble(message: msg).id(msg.id)
+                            MessageBubble(message: msg, entityNames: vm.entityNameMap).id(msg.id)
                         }
                     }
                     .padding(Spacing.md)
@@ -73,7 +89,7 @@ public struct IntelligenceView: View {
     private var suggestionRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: Spacing.sm) {
-                ForEach(vm.suggestions, id: \.self) { s in
+                ForEach(vm.dynamicSuggestions, id: \.self) { s in
                     Button { vm.send(s) } label: {
                         Text(s).font(.prvioCaption())
                             .padding(.horizontal, Spacing.md).padding(.vertical, Spacing.sm)
@@ -86,6 +102,11 @@ public struct IntelligenceView: View {
 
     private var composer: some View {
         HStack(spacing: Spacing.sm) {
+            Button { vm.clearChat() } label: {
+                Image(systemName: "trash").foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Clear conversation")
             Image(systemName: "sparkles").foregroundStyle(.prvioHorizon)
             TextField("Ask PRVIO…", text: $vm.draft, axis: .vertical)
                 .font(.prvioLabel())
@@ -102,6 +123,7 @@ public struct IntelligenceView: View {
 
 private struct MessageBubble: View {
     var message: AssistantMessage
+    var entityNames: [UUID: String] = [:]
     var isUser: Bool { message.role == .user }
 
     var body: some View {
@@ -115,11 +137,31 @@ private struct MessageBubble: View {
                         Text(insight.title).font(.prvioCaption())
                     }.foregroundStyle(.secondary)
                 }
+                if !message.highlightedEntityIDs.isEmpty {
+                    entityChips
+                }
             }
             .padding(Spacing.md)
             .liquidGlass(.raised, tint: isUser ? .prvioHorizon : .prvioMist, interactive: false)
             .frame(maxWidth: .infinity, alignment: isUser ? .trailing : .leading)
             if !isUser { Spacer(minLength: 40) }
         }
+    }
+
+    private var entityChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 4) {
+                ForEach(message.highlightedEntityIDs.prefix(5), id: \.self) { id in
+                    if let name = entityNames[id] {
+                        Text(name)
+                            .font(.system(size: 10, weight: .semibold))
+                            .padding(.horizontal, 6).padding(.vertical, 3)
+                            .background(Capsule().fill(Color.prvioHorizon.opacity(0.2)))
+                            .foregroundStyle(.prvioHorizon)
+                    }
+                }
+            }
+        }
+        .accessibilityLabel("\(message.highlightedEntityIDs.count) entities highlighted on map")
     }
 }

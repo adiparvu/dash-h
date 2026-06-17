@@ -180,6 +180,90 @@ public struct AIEngine: Sendable {
                 text: "Drafted an irrigation automation: when orchard soil moisture < 35% AND no rain forecast, run drip valves for 20 minutes at dawn. Tap to review and enable.")
         }
 
+        if q.contains("energy") || q.contains("solar") || q.contains("power") {
+            let panels = entities.filter { $0.kind == .solarPanel }
+            let totalW = panels.compactMap { $0.metrics["powerW"] }.reduce(0, +)
+            return AssistantMessage(role: .prvio,
+                text: totalW > 0
+                    ? "Your \(panels.count) solar panel\(panels.count == 1 ? "" : "s") are generating \(String(format: "%.0f", totalW)) W right now — enough to cover your current load."
+                    : "Solar generation is low right now. Check for shading or schedule a panel inspection.",
+                highlightedEntityIDs: panels.map(\.id))
+        }
+
+        if q.contains("carbon") || (q.contains("forest") && !q.contains("stress")) {
+            let trees = entities.filter { if case .tree = $0.detail { return true }; return false }
+            let totalC = trees.compactMap { $0.metrics["carbonKg"] }.reduce(0, +)
+            return AssistantMessage(role: .prvio,
+                text: "Your \(trees.count) trees are sequestering an estimated \(String(format: "%.0f", totalC)) kg CO₂ equivalent. Healthy canopy density is your most effective long-term carbon sink.",
+                highlightedEntityIDs: trees.map(\.id))
+        }
+
+        if q.contains("harvest") || (q.contains("orchard") && !q.contains("irrigation")) {
+            let orchards = entities.filter { if case .orchard = $0.detail { return true }; return false }
+            let ready = orchards.filter { e -> Bool in
+                if case .orchard(let o) = e.detail { return o.harvestReadiness > 0.70 }
+                return false
+            }
+            return AssistantMessage(role: .prvio,
+                text: ready.isEmpty
+                    ? "No orchard sections are harvest-ready yet (target: 70% ripeness). I'll alert you when the threshold is reached."
+                    : "\(ready.count) orchard section\(ready.count == 1 ? "" : "s") exceed 70% harvest readiness. Consider scheduling the picking crew this week.",
+                highlightedEntityIDs: ready.map(\.id))
+        }
+
+        if q.contains("offline") || (q.contains("device") && (q.contains("down") || q.contains("fail"))) {
+            let offline = entities.filter { e -> Bool in
+                if case .device(let d) = e.detail { return !d.isOnline }
+                return false
+            }
+            return AssistantMessage(role: .prvio,
+                text: offline.isEmpty
+                    ? "All devices are online — no connectivity issues detected across the property."
+                    : "\(offline.count) device\(offline.count == 1 ? " is" : "s are") offline. Check power and network connectivity for these nodes.",
+                highlightedEntityIDs: offline.map(\.id),
+                insights: insights.filter { $0.module == .home && $0.severity >= .advisory })
+        }
+
+        if q.contains("greenhouse") || (q.contains("co2") && !q.contains("pond")) || (q.contains("temperature") && !q.contains("pond")) {
+            let greenhouses = entities.filter { $0.kind.module == .greenhouse }
+            let hot = greenhouses.filter { e -> Bool in
+                if case .greenhouse(let g) = e.detail { return g.temperatureC > 30 }
+                return false
+            }
+            return AssistantMessage(role: .prvio,
+                text: hot.isEmpty
+                    ? "Greenhouse climate is within target — temperature, CO₂ and humidity all look good."
+                    : "\(hot.count) greenhouse\(hot.count == 1 ? "" : "s") running above 30°C. Open vents and shade if temperature exceeds 35°C.",
+                highlightedEntityIDs: greenhouses.map(\.id),
+                insights: insights.filter { $0.module == .greenhouse })
+        }
+
+        if q.contains("nitrogen") || q.contains("fertiliz") || q.contains("npk") || q.contains("field") {
+            let fields = entities.filter { if case .agriculture = $0.detail { return true }; return false }
+            let lowN = fields.filter { e -> Bool in
+                if case .agriculture(let a) = e.detail { return a.npk.nitrogen < 60 }
+                return false
+            }
+            return AssistantMessage(role: .prvio,
+                text: lowN.isEmpty
+                    ? "Field nutrient levels are within target range. Continue regular soil monitoring."
+                    : "\(lowN.count) field\(lowN.count == 1 ? "" : "s") show nitrogen below 60 kg/ha. Schedule top-dressing within 5 days for optimal yield.",
+                highlightedEntityIDs: lowN.map(\.id))
+        }
+
+        if q.contains("pest") || (q.contains("camera") && !q.contains("offline")) || q.contains("detect") {
+            let pestEntities = entities.filter { e -> Bool in
+                if case .tree(let t) = e.detail { return t.pestDetected }
+                return false
+            }
+            return AssistantMessage(role: .prvio,
+                text: pestEntities.isEmpty
+                    ? "No pest alerts from Camera AI right now — all clear across the property."
+                    : "Camera AI has flagged \(pestEntities.count) tree\(pestEntities.count == 1 ? "" : "s") with pest activity. Consider targeted treatment and monitoring spread.",
+                highlightedEntityIDs: pestEntities.map(\.id),
+                insights: insights.filter { $0.module == .forest })
+        }
+
         let topInsight = insights.first
         return AssistantMessage(
             role: .prvio,

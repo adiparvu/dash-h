@@ -19,6 +19,7 @@ import PrvioEarthCore
 public struct ImmersiveTwinView: View {
     var twin: DigitalTwinEngine
     @State private var selection: PropertyEntity?
+    @State private var sceneRoot: Entity?
 
     public init(twin: DigitalTwinEngine) { self.twin = twin }
 
@@ -26,6 +27,7 @@ public struct ImmersiveTwinView: View {
         RealityView { content, attachments in
             let root = Entity()
             content.add(root)
+            sceneRoot = root
 
             for entity in twin.entities {
                 let marker = ModelEntity(
@@ -38,6 +40,11 @@ public struct ImmersiveTwinView: View {
                 root.addChild(marker)
             }
         } update: { _, _ in
+            guard let root = sceneRoot else { return }
+            for entity in twin.entities {
+                guard let marker = root.findEntity(named: entity.id.uuidString) as? ModelEntity else { continue }
+                marker.model?.materials = [SimpleMaterial(color: .init(entity.health.score.uiColor), isMetallic: false)]
+            }
         } attachments: {
             if let selection {
                 Attachment(id: "detail") {
