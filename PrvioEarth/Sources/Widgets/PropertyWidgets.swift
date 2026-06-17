@@ -290,7 +290,7 @@ struct ModulePickerIntent: AppIntent, WidgetConfigurationIntent {
     static var description = IntentDescription("Select which property module to display.")
 
     @Parameter(title: "Module")
-    var module: ModuleChoice = .forest
+    var module: ModuleChoice
 
     init() {}
     init(module: ModuleChoice) { self.module = module }
