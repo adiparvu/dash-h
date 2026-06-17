@@ -26,6 +26,7 @@ public struct ObjectDetailSheet: View {
 
     @State private var showInspect = false
     @State private var showAutomation = false
+    @State private var showForecast = false
 
     public var body: some View {
         ScrollView {
@@ -168,21 +169,49 @@ public struct ObjectDetailSheet: View {
         }
     }
 
-    // MARK: - History
+    // MARK: - History / Forecast
 
     private var historySection: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            Label("History", systemImage: "chart.xyaxis.line").font(.prvioHeadline())
+            HStack {
+                Label(showForecast ? "7-Day Forecast" : "Health History",
+                      systemImage: showForecast ? "chart.line.uptrend.xyaxis" : "chart.xyaxis.line")
+                    .font(.prvioHeadline())
+                Spacer()
+                Picker("", selection: $showForecast) {
+                    Text("History").tag(false)
+                    Text("Forecast").tag(true)
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 150)
+            }
             GlassCard {
-                Chart(historyPoints) { point in
+                let points = showForecast ? twin.forecastHealth(for: entity.id) : historyPoints
+                Chart(points) { point in
                     AreaMark(x: .value("Time", point.timestamp), y: .value("Health", point.value))
-                        .foregroundStyle(tint.gradient.opacity(0.4))
+                        .foregroundStyle(tint.gradient.opacity(showForecast ? 0.2 : 0.4))
                     LineMark(x: .value("Time", point.timestamp), y: .value("Health", point.value))
-                        .foregroundStyle(tint)
+                        .foregroundStyle(showForecast ? tint.opacity(0.8) : tint)
+                        .lineStyle(StrokeStyle(lineWidth: 2, dash: showForecast ? [5, 3] : []))
                         .interpolationMethod(.catmullRom)
                 }
                 .chartYScale(domain: 0...1)
-                .frame(height: 120)
+                .chartXAxis {
+                    AxisMarks(values: .automatic(desiredCount: 4)) {
+                        AxisValueLabel(
+                            format: showForecast ? .dateTime.day().month() : .dateTime.hour().minute())
+                            .font(.system(size: 9)).foregroundStyle(Color.secondary)
+                        AxisGridLine(stroke: StrokeStyle(dash: [2, 4]))
+                            .foregroundStyle(Color.secondary.opacity(0.25))
+                    }
+                }
+                .frame(height: 130)
+                if showForecast {
+                    Text("AI-projected · mean-reversion model")
+                        .font(.system(size: 9)).foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .padding(.top, 2)
+                }
             }
         }
     }

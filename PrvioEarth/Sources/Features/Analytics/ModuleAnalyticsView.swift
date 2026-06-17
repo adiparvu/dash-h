@@ -21,8 +21,26 @@ public struct ForestAnalyticsView: View {
         PropertyAnalytics.forest(twin.entities)
     }
 
+    private var exportText: String {
+        let s = summary
+        let species = s.carbonBySpecies.map { "\($0.species): \(Int($0.carbonKg)) kg" }.joined(separator: ", ")
+        return """
+        PRVIO EARTH — Forest Analytics
+        Date: \(Date().formatted(.dateTime.day().month().year()))
+        ============================================
+        Trees: \(s.treeCount)
+        Total carbon: \(Int(s.totalCarbonKg)) kg
+        Average height: \(String(format: "%.1f", s.averageHeightM)) m
+        Car-offset equivalent: \(String(format: "%.1f", s.carEquivalent)) cars/year
+        Drought risk: \(s.droughtRiskCount) trees
+        Pest alerts: \(s.pestCount) trees
+        Carbon by species: \(species)
+        Data from PRVIO EARTH Digital Twin.
+        """
+    }
+
     public var body: some View {
-        AnalyticsScaffold(title: "Forest Analytics", tint: .domainForest) {
+        AnalyticsScaffold(title: "Forest Analytics", tint: .domainForest, exportText: exportText) {
             let s = summary
 
             StatRow(stats: [

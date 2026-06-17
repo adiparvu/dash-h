@@ -117,16 +117,32 @@ public struct MetricTile: View {
 public struct AnalyticsScaffold<Content: View>: View {
     public var title: String
     public var tint: Color
+    public var exportText: String?
     @ViewBuilder public var content: () -> Content
 
-    public init(title: String, tint: Color, @ViewBuilder content: @escaping () -> Content) {
-        self.title = title; self.tint = tint; self.content = content
+    public init(title: String, tint: Color, exportText: String? = nil,
+                @ViewBuilder content: @escaping () -> Content) {
+        self.title = title; self.tint = tint; self.exportText = exportText; self.content = content
     }
 
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.lg) {
-                Text(title).font(.prvioTitle())
+                HStack(alignment: .firstTextBaseline) {
+                    Text(title).font(.prvioTitle())
+                    Spacer()
+                    if let text = exportText {
+                        ShareLink(item: text,
+                                  subject: Text(title),
+                                  message: Text("Exported from PRVIO EARTH")) {
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.prvioLabel())
+                                .padding(Spacing.sm)
+                                .liquidGlass(.raised, tint: tint, interactive: false)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
                 content()
             }
             .padding(Spacing.lg)

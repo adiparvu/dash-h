@@ -48,6 +48,22 @@ public final class IntelligenceViewModel {
         Dictionary(uniqueKeysWithValues: twin.entities.map { ($0.id, $0.name) })
     }
 
+    public var conversationExport: String {
+        var lines = [
+            "PRVIO Intelligence — Conversation Export",
+            "Date: \(Date().formatted(.dateTime.day().month().year().hour().minute()))",
+            String(repeating: "-", count: 44),
+            "",
+        ]
+        for msg in messages {
+            let prefix = msg.role == .user ? "You" : "PRVIO"
+            lines.append("\(prefix): \(msg.text)")
+            for insight in msg.insights { lines.append("  • \(insight.title)") }
+            lines.append("")
+        }
+        return lines.joined(separator: "\n")
+    }
+
     public func clearChat() {
         let greeting = AssistantMessage(role: .prvio,
             text: "Hello — I'm PRVIO Intelligence. Ask me anything about your property. Try \"Show stressed trees\" or \"Predict pond health for next week.\"")
@@ -144,6 +160,13 @@ public struct IntelligenceView: View {
             TextField("Ask PRVIO…", text: $vm.draft, axis: .vertical)
                 .font(.prvioLabel())
                 .onSubmit { vm.send() }
+            ShareLink(item: vm.conversationExport,
+                      subject: Text("PRVIO Intelligence Conversation"),
+                      message: Text("Exported from PRVIO EARTH")) {
+                Image(systemName: "square.and.arrow.up").foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Export conversation")
             Button { vm.send() } label: {
                 Image(systemName: "arrow.up.circle.fill").font(.title2).foregroundStyle(.prvioHorizon)
             }.buttonStyle(.plain)

@@ -22,6 +22,8 @@ public final class PropertyEditorViewModel {
     public var pendingCoordinate: CLLocationCoordinate2D?
     public var draftKind: EntityKind = .tree
     public var draftName: String = ""
+    /// ID of the last successfully placed entity — used by the undo button.
+    public var lastAddedID: UUID? = nil
 
     public init(twin: DigitalTwinEngine) {
         self.twin = twin
@@ -53,7 +55,14 @@ public final class PropertyEditorViewModel {
             metrics: [:],
             detail: defaultDetail(for: draftKind))
         twin.addEntity(entity)
+        lastAddedID = entity.id
         withAnimation(.prvioMorph) { pendingCoordinate = nil }
+    }
+
+    public func undoLastPlacement() {
+        guard let id = lastAddedID else { return }
+        withAnimation(.prvioMorph) { twin.removeEntity(id) }
+        lastAddedID = nil
     }
 
     // swiftlint:disable:next cyclomatic_complexity
@@ -181,6 +190,11 @@ public struct PropertyEditorView: View {
             .padding(.horizontal, Spacing.md).padding(.vertical, Spacing.sm)
             .liquidGlass(.floating, tint: .prvioHorizon)
             Spacer()
+            if vm.lastAddedID != nil {
+                GlassButton("Undo", systemImage: "arrow.uturn.backward", tint: .domainSecurity) {
+                    vm.undoLastPlacement()
+                }
+            }
             GlassButton("Done", systemImage: "checkmark", tint: .healthThriving, action: onDone)
         }
     }
