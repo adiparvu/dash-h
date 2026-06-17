@@ -146,7 +146,7 @@ private struct PhaseCell: View {
             if count > 0 {
                 Text("\(count)")
                     .font(.system(size: 8))
-                    .foregroundStyle(isActive ? phaseColor : .tertiary)
+                    .foregroundStyle(isActive ? phaseColor : Color.secondary)
             }
         }
         .frame(maxWidth: .infinity)
